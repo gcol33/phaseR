@@ -1,4 +1,4 @@
-# phaseR 1.0.0
+# phaseR 2.0.0
 
 Initial CRAN release.
 

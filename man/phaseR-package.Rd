@@ -2,33 +2,77 @@
 % Please edit documentation in R/phaseR-package.R
 \docType{package}
 \name{phaseR-package}
+\alias{phaseR}
 \alias{phaseR-package}
 \title{phaseR: Phase-Structured Inference for Longitudinal Change}
 \description{
-A framework for analysing change in longitudinal data that treats "before" and "after" as regimes, not time points. Separates regime activation from regime-specific dynamics, preventing outcome-dependent stratification and enabling valid counterfactual inference. Applicable to ecology, epidemiology, economics, psychology, medicine, and any field with latent phase transitions.
-
 A framework for analysing change in longitudinal data that treats
-"before" and "after" as regimes, not time points.
+"before" and "after" as regimes (phases), not time points. The key insight
+is that \strong{inference conditional on realized change is not a valid estimand}.
 }
-\section{Core functions}{
+\section{The Problem}{
 
+Conventional analyses often:
+\enumerate{
+\item Observe when a unit "changes" (e.g., disease onset, treatment adoption)
+\item Compare outcomes before vs. after the change
+\item Attribute the difference to the "effect" of the change
+}
+
+This approach conflates the true phase effect with selection effects from
+the transition mechanism.
+}
+
+\section{The Solution}{
+
+phaseR models the complete generative process:
+\itemize{
+\item \strong{Transition model}: How units move between phases
+\item \strong{Dynamics model}: How outcomes behave within each phase
+}
+
+By jointly modeling both components and integrating over phase uncertainty,
+phaseR produces valid causal estimates.
+}
+
+\section{Core Functions}{
+
+\strong{Model specification:}
 \itemize{
 \item \code{\link{phases}}: Declare ordered phases
 \item \code{\link{transition}}: Specify transition model
 \item \code{\link{dynamics}}: Specify phase-specific dynamics
 \item \code{\link{phase_model}}: Compose a complete model
+}
+
+\strong{Fitting:}
+\itemize{
 \item \code{\link{fit_phaseR}}: Fit the model via HMC
-\item \code{\link{sim_phaseR}}: Simulate data from a phase model
+}
+
+\strong{Inference:}
+\itemize{
+\item \code{\link{posterior_predict}}: Posterior predictive simulation
+\item \code{\link{counterfactual}}: Counterfactual prediction
+\item \code{\link{ate}}: Average treatment effects
+\item \code{\link{ite}}: Individual treatment effects
+}
+
+\strong{Simulation:}
+\itemize{
+\item \code{\link{sim_phaseR}}: Simulate 2-phase Gaussian data
+\item \code{\link{sim_phaseR_k}}: Simulate k-phase data
+\item \code{\link{sim_phaseR_poisson}}: Simulate Poisson data
 }
 }
 
-\section{Design principles}{
+\section{Design Principles}{
 
 \itemize{
 \item Change (delta) is never modelled directly
 \item Phases are regimes, not time points
 \item Phase membership is latent or probabilistic
-\item Transitions are modelled, not observed
+\item Transitions are modelled, not conditioned on
 }
 }
 

@@ -183,6 +183,16 @@ prepare_stan_data <- function(model, data) {
                      paste0("log_sigma_dyn_re_", model$phases$names[2]))
   }
 
+  # Extract family info
+  family_0 <- model$dynamics[[1]]$family
+  family_1 <- if (length(model$dynamics) > 1) model$dynamics[[2]]$family else family_0
+
+  family_code_0 <- encode_family(family_0)
+  family_code_1 <- encode_family(family_1)
+
+  # Check if non-Gaussian families are used
+  is_glm <- family_code_0 > 0 || family_code_1 > 0
+
   list(
     id = as.integer(factor(data$id)),
     time = data$time,
@@ -200,6 +210,12 @@ prepare_stan_data <- function(model, data) {
     n_params = n_params,
     param_names = param_names,
     k_phases = 2L,
+    # Family info
+    is_glm = is_glm,
+    family_0 = family_code_0,
+    family_1 = family_code_1,
+    n_trials_0 = 1L,
+    n_trials_1 = 1L,
     # RE info
     has_re = has_re,
     has_trans_re = has_trans_re,
@@ -214,6 +230,20 @@ prepare_stan_data <- function(model, data) {
     trans_re_levels = trans_re_levels,
     dyn_re_levels_0 = dyn_re_levels_0,
     dyn_re_levels_1 = dyn_re_levels_1
+  )
+}
+
+
+#' Encode R family object to integer
+#' @keywords internal
+encode_family <- function(family) {
+  if (is.null(family)) return(0L)
+  fam <- family$family
+  switch(fam,
+    gaussian = 0L,
+    poisson = 1L,
+    binomial = 2L,
+    0L  # default to gaussian
   )
 }
 

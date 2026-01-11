@@ -49,11 +49,11 @@ fit_hmc <- function(stan_data, chains, iter, warmup, cores, ...) {
 #' @keywords internal
 run_nuts_chain <- function(stan_data, init, iter, warmup, ...) {
 
-  # Dispatch based on k_phases and random effects
+  # Dispatch based on k_phases, random effects, and GLM
   k_phases <- stan_data$k_phases
 
   if (k_phases > 2) {
-    # k-phase model (no RE support yet)
+    # k-phase model (no RE or GLM support yet)
     result <- phaseR_nuts_sampler_k(
       data = list(
         id = stan_data$id,
@@ -72,8 +72,32 @@ run_nuts_chain <- function(stan_data, init, iter, warmup, ...) {
       n_trans_coef = as.integer(stan_data$n_trans_coef),
       k_phases = as.integer(k_phases)
     )
+  } else if (isTRUE(stan_data$is_glm)) {
+    # 2-phase GLM (no RE support yet)
+    result <- phaseR_nuts_sampler_glm(
+      data = list(
+        id = stan_data$id,
+        time = stan_data$time,
+        y = stan_data$y,
+        X_trans = stan_data$X_trans,
+        X_dyn = stan_data$X_dyn,
+        n_units = stan_data$n_units,
+        unit_start = stan_data$unit_start,
+        unit_end = stan_data$unit_end
+      ),
+      init = init,
+      n_iter = as.integer(iter),
+      n_warmup = as.integer(warmup),
+      n_trans_coef = stan_data$n_trans_coef,
+      n_dyn_coef_0 = stan_data$n_dyn_coef_0,
+      n_dyn_coef_1 = stan_data$n_dyn_coef_1,
+      family_0 = stan_data$family_0,
+      family_1 = stan_data$family_1,
+      n_trials_0 = stan_data$n_trials_0,
+      n_trials_1 = stan_data$n_trials_1
+    )
   } else if (isTRUE(stan_data$has_re)) {
-    # 2-phase with random effects
+    # 2-phase Gaussian with random effects
     result <- phaseR_nuts_sampler_re(
       data = list(
         id = stan_data$id,
@@ -102,7 +126,7 @@ run_nuts_chain <- function(stan_data, init, iter, warmup, ...) {
       has_dyn_re_1 = stan_data$has_dyn_re_1
     )
   } else {
-    # 2-phase without random effects
+    # 2-phase Gaussian without random effects
     result <- phaseR_nuts_sampler(
       data = list(
         id = stan_data$id,

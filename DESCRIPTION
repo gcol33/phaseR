@@ -1,6 +1,6 @@
 Package: phaseR
 Title: Phase-Structured Inference for Longitudinal Change
-Version: 0.1.0
+Version: 0.2.0
 Authors@R:
     person("Gilles", "Colling", , "gilles.colling@uclouvain.be", role = c("aut", "cre"))
 Description: A framework for analysing change in longitudinal data that
@@ -12,11 +12,15 @@ Description: A framework for analysing change in longitudinal data that
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.0
+RoxygenNote: 7.3.3
 Imports:
     stats,
-    methods
+    methods,
+    Rcpp (>= 1.0.0)
+LinkingTo:
+    Rcpp
 Suggests:
-    testthat (>= 3.0.0)
+    testthat (>= 3.0.0),
+    parallel
 Config/testthat/edition: 3
 Language: en-US

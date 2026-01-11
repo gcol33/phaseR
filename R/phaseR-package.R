@@ -12,6 +12,8 @@
 #'   \item \code{\link{transition}}: Specify transition model
 #'   \item \code{\link{dynamics}}: Specify phase-specific dynamics
 #'   \item \code{\link{phase_model}}: Compose a complete model
+#'   \item \code{\link{fit_phaseR}}: Fit the model via HMC
+#'   \item \code{\link{sim_phaseR}}: Simulate data from a phase model
 #' }
 #'
 #' @section Design principles:
@@ -22,6 +24,8 @@
 #'   \item Transitions are modelled, not observed
 #' }
 #'
+#' @useDynLib phaseR, .registration = TRUE
+#' @importFrom Rcpp sourceCpp
 #' @docType package
 #' @name phaseR-package
 NULL

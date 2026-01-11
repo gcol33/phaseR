@@ -1,0 +1,22 @@
+Package: phaseR
+Title: Phase-Structured Inference for Longitudinal Change
+Version: 0.1.0
+Authors@R:
+    person("Gilles", "Colling", , "gilles.colling@uclouvain.be", role = c("aut", "cre"))
+Description: A framework for analysing change in longitudinal data that
+    treats "before" and "after" as regimes, not time points. Separates
+    regime activation from regime-specific dynamics, preventing
+    outcome-dependent stratification and enabling valid counterfactual
+    inference. Applicable to ecology, epidemiology, economics, psychology,
+    medicine, and any field with latent phase transitions.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.0
+Imports:
+    stats,
+    methods
+Suggests:
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
+Language: en-US

@@ -218,6 +218,13 @@ compute_ess <- function(draws, chain_id) {
 
 
 #' Extract coefficients from phase_fit
+#'
+#' Returns posterior means of all parameters.
+#'
+#' @param object A `phase_fit` object
+#' @param ... Additional arguments (unused)
+#'
+#' @return Named numeric vector of posterior means
 #' @export
 coef.phase_fit <- function(object, ...) {
   colMeans(object$draws)
@@ -225,6 +232,13 @@ coef.phase_fit <- function(object, ...) {
 
 
 #' Extract fitted values from phase_fit
+#'
+#' Returns predicted response values at each observation.
+#'
+#' @param object A `phase_fit` object
+#' @param ... Additional arguments (unused)
+#'
+#' @return Numeric vector of fitted values
 #' @export
 fitted.phase_fit <- function(object, ...) {
   predict(object, type = "response")

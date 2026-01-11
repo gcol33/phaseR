@@ -6,6 +6,14 @@
 \usage{
 \method{fitted}{phase_fit}(object, ...)
 }
+\arguments{
+\item{object}{A \code{phase_fit} object}
+
+\item{...}{Additional arguments (unused)}
+}
+\value{
+Numeric vector of fitted values
+}
 \description{
-Extract fitted values from phase_fit
+Returns predicted response values at each observation.
 }

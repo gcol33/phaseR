@@ -6,6 +6,14 @@
 \usage{
 \method{coef}{phase_fit}(object, ...)
 }
+\arguments{
+\item{object}{A \code{phase_fit} object}
+
+\item{...}{Additional arguments (unused)}
+}
+\value{
+Named numeric vector of posterior means
+}
 \description{
-Extract coefficients from phase_fit
+Returns posterior means of all parameters.
 }

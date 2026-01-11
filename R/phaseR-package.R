@@ -62,5 +62,9 @@
 #'
 #' @useDynLib phaseR, .registration = TRUE
 #' @importFrom Rcpp sourceCpp
+#' @importFrom stats acf as.formula density dnorm gaussian median model.matrix
+#'   plogis predict quantile rbinom rnorm rpois runif sd setNames update var
+#' @importFrom graphics lines par
+#' @importFrom grDevices rainbow
 #' @keywords internal
 "_PACKAGE"

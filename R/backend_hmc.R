@@ -48,25 +48,55 @@ fit_hmc <- function(stan_data, chains, iter, warmup, cores, ...) {
 #' @keywords internal
 run_nuts_chain <- function(stan_data, init, iter, warmup, ...) {
 
-  # Call C++ NUTS sampler
-  result <- phaseR_nuts_sampler(
-    data = list(
-      id = stan_data$id,
-      time = stan_data$time,
-      y = stan_data$y,
-      X_trans = stan_data$X_trans,
-      X_dyn = stan_data$X_dyn_0,  # Use phase 0 design matrix
-      n_units = stan_data$n_units,
-      unit_start = stan_data$unit_start,
-      unit_end = stan_data$unit_end
-    ),
-    init = init,
-    n_iter = as.integer(iter),
-    n_warmup = as.integer(warmup),
-    n_trans_coef = stan_data$n_trans_coef,
-    n_dyn_coef_0 = stan_data$n_dyn_coef_0,
-    n_dyn_coef_1 = stan_data$n_dyn_coef_1
-  )
+  # Dispatch based on whether we have random effects
+  if (isTRUE(stan_data$has_re)) {
+    result <- phaseR_nuts_sampler_re(
+      data = list(
+        id = stan_data$id,
+        time = stan_data$time,
+        y = stan_data$y,
+        X_trans = stan_data$X_trans,
+        X_dyn = stan_data$X_dyn,
+        n_units = stan_data$n_units,
+        unit_start = stan_data$unit_start,
+        unit_end = stan_data$unit_end,
+        trans_re_idx = stan_data$trans_re_idx,
+        dyn_re_idx_0 = stan_data$dyn_re_idx_0,
+        dyn_re_idx_1 = stan_data$dyn_re_idx_1
+      ),
+      init = init,
+      n_iter = as.integer(iter),
+      n_warmup = as.integer(warmup),
+      n_trans_coef = stan_data$n_trans_coef,
+      n_dyn_coef_0 = stan_data$n_dyn_coef_0,
+      n_dyn_coef_1 = stan_data$n_dyn_coef_1,
+      n_trans_re = stan_data$n_trans_re,
+      n_dyn_re_0 = stan_data$n_dyn_re_0,
+      n_dyn_re_1 = stan_data$n_dyn_re_1,
+      has_trans_re = stan_data$has_trans_re,
+      has_dyn_re_0 = stan_data$has_dyn_re_0,
+      has_dyn_re_1 = stan_data$has_dyn_re_1
+    )
+  } else {
+    result <- phaseR_nuts_sampler(
+      data = list(
+        id = stan_data$id,
+        time = stan_data$time,
+        y = stan_data$y,
+        X_trans = stan_data$X_trans,
+        X_dyn = stan_data$X_dyn,
+        n_units = stan_data$n_units,
+        unit_start = stan_data$unit_start,
+        unit_end = stan_data$unit_end
+      ),
+      init = init,
+      n_iter = as.integer(iter),
+      n_warmup = as.integer(warmup),
+      n_trans_coef = stan_data$n_trans_coef,
+      n_dyn_coef_0 = stan_data$n_dyn_coef_0,
+      n_dyn_coef_1 = stan_data$n_dyn_coef_1
+    )
+  }
 
   list(
     draws = result$draws,

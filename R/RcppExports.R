@@ -5,6 +5,10 @@ phaseR_nuts_sampler <- function(data, init, n_iter, n_warmup, n_trans_coef, n_dy
     .Call(`_phaseR_phaseR_nuts_sampler`, data, init, n_iter, n_warmup, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, target_accept, max_treedepth)
 }
 
+phaseR_nuts_sampler_re <- function(data, init, n_iter, n_warmup, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, n_trans_re, n_dyn_re_0, n_dyn_re_1, has_trans_re, has_dyn_re_0, has_dyn_re_1, target_accept = 0.8, max_treedepth = 10L) {
+    .Call(`_phaseR_phaseR_nuts_sampler_re`, data, init, n_iter, n_warmup, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, n_trans_re, n_dyn_re_0, n_dyn_re_1, has_trans_re, has_dyn_re_0, has_dyn_re_1, target_accept, max_treedepth)
+}
+
 phase_log_likelihood <- function(params, data, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1) {
     .Call(`_phaseR_phase_log_likelihood`, params, data, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1)
 }
@@ -15,5 +19,17 @@ phase_log_prior <- function(params, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1) {
 
 phase_log_posterior <- function(params, data, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1) {
     .Call(`_phaseR_phase_log_posterior`, params, data, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1)
+}
+
+phase_log_likelihood_re <- function(params, data, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, n_trans_re, n_dyn_re_0, n_dyn_re_1, has_trans_re, has_dyn_re_0, has_dyn_re_1) {
+    .Call(`_phaseR_phase_log_likelihood_re`, params, data, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, n_trans_re, n_dyn_re_0, n_dyn_re_1, has_trans_re, has_dyn_re_0, has_dyn_re_1)
+}
+
+phase_log_prior_re <- function(params, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, n_trans_re, n_dyn_re_0, n_dyn_re_1, has_trans_re, has_dyn_re_0, has_dyn_re_1) {
+    .Call(`_phaseR_phase_log_prior_re`, params, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, n_trans_re, n_dyn_re_0, n_dyn_re_1, has_trans_re, has_dyn_re_0, has_dyn_re_1)
+}
+
+phase_log_posterior_re <- function(params, data, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, n_trans_re, n_dyn_re_0, n_dyn_re_1, has_trans_re, has_dyn_re_0, has_dyn_re_1) {
+    .Call(`_phaseR_phase_log_posterior_re`, params, data, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, n_trans_re, n_dyn_re_0, n_dyn_re_1, has_trans_re, has_dyn_re_0, has_dyn_re_1)
 }
 

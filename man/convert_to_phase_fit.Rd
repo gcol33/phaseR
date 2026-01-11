@@ -4,7 +4,16 @@
 \alias{convert_to_phase_fit}
 \title{Convert raw fit to phase_fit object}
 \usage{
-convert_to_phase_fit(fit_raw, model, data, backend, chains, iter, warmup)
+convert_to_phase_fit(
+  fit_raw,
+  model,
+  data,
+  backend,
+  chains,
+  iter,
+  warmup,
+  stan_data
+)
 }
 \description{
 Convert raw fit to phase_fit object

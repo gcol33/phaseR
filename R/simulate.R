@@ -67,3 +67,98 @@ sim_phaseR <- function(n_units = 100,
 
   do.call(rbind, data_list)
 }
+
+
+#' Simulate data from a k-phase model
+#'
+#' @param n_units Number of units
+#' @param n_times Number of time points per unit
+#' @param k Number of phases (must be >= 2)
+#' @param beta_trans List of transition coefficient vectors (length k-1)
+#' @param beta_dyn List of dynamics coefficient vectors (length k)
+#' @param sigma Vector of residual SDs (length k)
+#' @param seed Random seed
+#'
+#' @return A data frame suitable for `fit_phaseR()`
+#' @export
+#'
+#' @examples
+#' # 3-phase model
+#' dat <- sim_phaseR_k(n_units = 50, n_times = 8, k = 3)
+#' table(dat$true_phase)
+#'
+sim_phaseR_k <- function(n_units = 100,
+                          n_times = 8,
+                          k = 3,
+                          beta_trans = NULL,
+                          beta_dyn = NULL,
+                          sigma = NULL,
+                          seed = NULL) {
+
+  if (k < 2) stop("k must be at least 2", call. = FALSE)
+
+  if (!is.null(seed)) set.seed(seed)
+
+  # Default parameters if not provided
+  if (is.null(beta_trans)) {
+    # k-1 transitions, each with intercept only that decreases
+    beta_trans <- lapply(seq_len(k - 1), function(i) c(-1.5 + 0.3 * i))
+  }
+  if (is.null(beta_dyn)) {
+    # k phases, intercept decreases by 2 per phase
+    beta_dyn <- lapply(seq_len(k), function(p) c(12 - 2 * (p - 1)))
+  }
+  if (is.null(sigma)) {
+    sigma <- rep(1, k)
+  }
+
+  # Generate data
+  data_list <- lapply(seq_len(n_units), function(i) {
+
+    x <- rnorm(n_times)
+    phase <- integer(n_times)
+    y <- numeric(n_times)
+
+    # Initial phase always 0
+    phase[1] <- 0
+    mu_1 <- sum(beta_dyn[[1]] * c(1, x[1])[seq_along(beta_dyn[[1]])])
+    y[1] <- mu_1 + rnorm(1, 0, sigma[1])
+
+    for (t in 2:n_times) {
+      current_phase <- phase[t - 1]
+
+      # Check for transition (if not in absorbing state)
+      if (current_phase < k - 1) {
+        # Get transition coefficients for current phase
+        b_trans <- beta_trans[[current_phase + 1]]
+        X_trans <- c(1, x[t])[seq_along(b_trans)]
+        p_trans <- plogis(sum(b_trans * X_trans))
+
+        if (runif(1) < p_trans) {
+          phase[t] <- current_phase + 1
+        } else {
+          phase[t] <- current_phase
+        }
+      } else {
+        # Absorbing state
+        phase[t] <- current_phase
+      }
+
+      # Generate outcome for current phase
+      p <- phase[t] + 1  # 1-indexed
+      b_dyn <- beta_dyn[[p]]
+      X_dyn <- c(1, x[t])[seq_along(b_dyn)]
+      y[t] <- sum(b_dyn * X_dyn) + rnorm(1, 0, sigma[p])
+    }
+
+    data.frame(
+      id = i,
+      time = seq_len(n_times),
+      x = x,
+      y = y,
+      true_phase = phase
+    )
+  })
+
+  do.call(rbind, data_list)
+}

@@ -78,13 +78,23 @@ prepare_stan_data <- function(model, data) {
     unit_end[i] <- max(idx) - 1L
   }
 
+  k_phases <- model$phases$n_phases
+  phase_names <- model$phases$names
+  response_var <- model$dynamics[[1]]$response
+
+  # Dispatch to k-phase or 2-phase data preparation
+  if (k_phases > 2) {
+    return(prepare_stan_data_k(model, data, unit_start, unit_end, n_units,
+                                k_phases, phase_names, response_var))
+  }
+
+  # Original 2-phase logic
   # Parse formulas for random effects
   trans_formula <- model$transitions[[1]]$formula
   trans_parsed <- parse_formula_re(trans_formula)
 
   dyn_formula_0 <- model$dynamics[[1]]$formula
   dyn_formula_1 <- if (length(model$dynamics) > 1) model$dynamics[[2]]$formula else dyn_formula_0
-  response_var <- model$dynamics[[1]]$response
 
   dyn_parsed_0 <- parse_formula_re(dyn_formula_0)
   dyn_parsed_1 <- parse_formula_re(dyn_formula_1)
@@ -189,6 +199,7 @@ prepare_stan_data <- function(model, data) {
     n_dyn_coef_1 = n_dyn_coef_1,
     n_params = n_params,
     param_names = param_names,
+    k_phases = 2L,
     # RE info
     has_re = has_re,
     has_trans_re = has_trans_re,
@@ -207,34 +218,154 @@ prepare_stan_data <- function(model, data) {
 }
 
 
+#' Prepare data for k-phase C++ likelihood
+#' @keywords internal
+prepare_stan_data_k <- function(model, data, unit_start, unit_end, n_units,
+                                 k_phases, phase_names, response_var) {
+
+  # Build design matrices for each transition and each phase dynamics
+  # Transitions: k-1 (from phase i to i+1)
+  X_trans_list <- vector("list", k_phases - 1)
+  n_trans_coef_vec <- integer(k_phases - 1)
+
+  # Find matching transition for each edge in the chain
+  for (i in seq_len(k_phases - 1)) {
+    from_phase <- phase_names[i]
+    to_phase <- phase_names[i + 1]
+
+    # Find the transition definition
+    tr <- NULL
+    for (t in model$transitions) {
+      if (t$from == from_phase && t$to == to_phase) {
+        tr <- t
+        break
+      }
+    }
+
+    if (is.null(tr)) {
+      # Default to intercept-only
+      X_trans_list[[i]] <- model.matrix(~ 1, data)
+    } else {
+      parsed <- parse_formula_re(tr$formula)
+      X_trans_list[[i]] <- model.matrix(parsed$fixed_formula, data)
+    }
+    n_trans_coef_vec[i] <- ncol(X_trans_list[[i]])
+  }
+
+  # Dynamics: k phases
+  X_dyn_list <- vector("list", k_phases)
+  n_dyn_coef_vec <- integer(k_phases)
+
+  for (p in seq_len(k_phases)) {
+    phase_name <- phase_names[p]
+
+    # Find the dynamics definition
+    dyn <- NULL
+    for (d in model$dynamics) {
+      if (d$phase == phase_name) {
+        dyn <- d
+        break
+      }
+    }
+
+    if (is.null(dyn)) {
+      # Default to intercept-only
+      X_dyn_list[[p]] <- model.matrix(~ 1, data)
+    } else {
+      parsed <- parse_formula_re(dyn$formula)
+      X_dyn_list[[p]] <- model.matrix(update(parsed$fixed_formula, NULL ~ .), data)
+    }
+    n_dyn_coef_vec[p] <- ncol(X_dyn_list[[p]])
+  }
+
+  # Parameter names and counts
+  param_names <- character(0)
+
+  # Transition coefficients
+  for (i in seq_len(k_phases - 1)) {
+    from_phase <- phase_names[i]
+    to_phase <- phase_names[i + 1]
+    param_names <- c(param_names,
+                     paste0("beta_trans_", from_phase, "_to_", to_phase, "_",
+                            colnames(X_trans_list[[i]])))
+  }
+
+  # Dynamics coefficients
+  for (p in seq_len(k_phases)) {
+    param_names <- c(param_names,
+                     paste0("beta_", phase_names[p], "_", colnames(X_dyn_list[[p]])))
+  }
+
+  # Sigmas
+  for (p in seq_len(k_phases)) {
+    param_names <- c(param_names, paste0("log_sigma_", phase_names[p]))
+  }
+
+  n_params <- sum(n_trans_coef_vec) + sum(n_dyn_coef_vec) + k_phases
+
+  list(
+    id = as.integer(factor(data$id)),
+    time = data$time,
+    y = data[[response_var]],
+    X_trans_list = X_trans_list,
+    X_dyn_list = X_dyn_list,
+    n_units = n_units,
+    unit_start = unit_start,
+    unit_end = unit_end,
+    n_trans_coef = n_trans_coef_vec,
+    n_dyn_coef = n_dyn_coef_vec,
+    k_phases = k_phases,
+    n_params = n_params,
+    param_names = param_names,
+    phase_names = phase_names,
+    # k-phase models don't support RE yet
+    has_re = FALSE,
+    has_trans_re = FALSE,
+    has_dyn_re_0 = FALSE,
+    has_dyn_re_1 = FALSE
+  )
+}
+
+
 #' Convert raw fit to phase_fit object
 #' @keywords internal
 convert_to_phase_fit <- function(fit_raw, model, data, backend, chains, iter, warmup, stan_data) {
 
-  structure(
-    list(
-      draws = fit_raw$draws,
-      chain_id = fit_raw$chain_id,
-      param_names = fit_raw$param_names,
-      model = model,
-      data = data,
-      backend = backend,
-      n_chains = chains,
-      n_iter = iter,
-      n_warmup = warmup,
-      n_units = length(unique(data$id)),
-      n_times = max(data$time),
-      diagnostics = fit_raw$diagnostics,
-      # RE info
-      has_re = stan_data$has_re,
-      has_trans_re = stan_data$has_trans_re,
-      has_dyn_re = stan_data$has_dyn_re_0 || stan_data$has_dyn_re_1,
-      trans_re_levels = stan_data$trans_re_levels,
-      dyn_re_levels = list(
-        phase_0 = stan_data$dyn_re_levels_0,
-        phase_1 = stan_data$dyn_re_levels_1
-      )
-    ),
-    class = "phase_fit"
+  k_phases <- stan_data$k_phases
+
+  fit_obj <- list(
+    draws = fit_raw$draws,
+    chain_id = fit_raw$chain_id,
+    param_names = fit_raw$param_names,
+    model = model,
+    data = data,
+    backend = backend,
+    n_chains = chains,
+    n_iter = iter,
+    n_warmup = warmup,
+    n_units = length(unique(data$id)),
+    n_times = max(data$time),
+    diagnostics = fit_raw$diagnostics,
+    k_phases = k_phases
   )
+
+  if (k_phases == 2) {
+    # 2-phase with RE info
+    fit_obj$has_re <- stan_data$has_re
+    fit_obj$has_trans_re <- stan_data$has_trans_re
+    fit_obj$has_dyn_re <- stan_data$has_dyn_re_0 || stan_data$has_dyn_re_1
+    fit_obj$trans_re_levels <- stan_data$trans_re_levels
+    fit_obj$dyn_re_levels <- list(
+      phase_0 = stan_data$dyn_re_levels_0,
+      phase_1 = stan_data$dyn_re_levels_1
+    )
+  } else {
+    # k-phase (no RE yet)
+    fit_obj$has_re <- FALSE
+    fit_obj$has_trans_re <- FALSE
+    fit_obj$has_dyn_re <- FALSE
+    fit_obj$phase_names <- stan_data$phase_names
+  }
+
+  structure(fit_obj, class = "phase_fit")
 }

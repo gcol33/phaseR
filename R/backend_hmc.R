@@ -39,7 +39,8 @@ fit_hmc <- function(stan_data, chains, iter, warmup, cores, ...) {
     chain_id = rep(seq_len(chains), each = iter - warmup),
     diagnostics = combine_diagnostics(draws_list),
     n_params = n_params,
-    param_names = stan_data$param_names
+    param_names = stan_data$param_names,
+    k_phases = stan_data$k_phases
   )
 }
 
@@ -48,8 +49,31 @@ fit_hmc <- function(stan_data, chains, iter, warmup, cores, ...) {
 #' @keywords internal
 run_nuts_chain <- function(stan_data, init, iter, warmup, ...) {
 
-  # Dispatch based on whether we have random effects
-  if (isTRUE(stan_data$has_re)) {
+  # Dispatch based on k_phases and random effects
+  k_phases <- stan_data$k_phases
+
+  if (k_phases > 2) {
+    # k-phase model (no RE support yet)
+    result <- phaseR_nuts_sampler_k(
+      data = list(
+        id = stan_data$id,
+        time = stan_data$time,
+        y = stan_data$y,
+        X_trans_list = stan_data$X_trans_list,
+        X_dyn_list = stan_data$X_dyn_list,
+        n_units = stan_data$n_units,
+        unit_start = stan_data$unit_start,
+        unit_end = stan_data$unit_end
+      ),
+      init = init,
+      n_iter = as.integer(iter),
+      n_warmup = as.integer(warmup),
+      n_dyn_coef = as.integer(stan_data$n_dyn_coef),
+      n_trans_coef = as.integer(stan_data$n_trans_coef),
+      k_phases = as.integer(k_phases)
+    )
+  } else if (isTRUE(stan_data$has_re)) {
+    # 2-phase with random effects
     result <- phaseR_nuts_sampler_re(
       data = list(
         id = stan_data$id,
@@ -78,6 +102,7 @@ run_nuts_chain <- function(stan_data, init, iter, warmup, ...) {
       has_dyn_re_1 = stan_data$has_dyn_re_1
     )
   } else {
+    # 2-phase without random effects
     result <- phaseR_nuts_sampler(
       data = list(
         id = stan_data$id,

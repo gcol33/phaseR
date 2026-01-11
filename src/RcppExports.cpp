@@ -54,6 +54,25 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// phaseR_nuts_sampler_k
+List phaseR_nuts_sampler_k(List data, NumericVector init, int n_iter, int n_warmup, IntegerVector n_dyn_coef, IntegerVector n_trans_coef, int k_phases, double target_accept, int max_treedepth);
+RcppExport SEXP _phaseR_phaseR_nuts_sampler_k(SEXP dataSEXP, SEXP initSEXP, SEXP n_iterSEXP, SEXP n_warmupSEXP, SEXP n_dyn_coefSEXP, SEXP n_trans_coefSEXP, SEXP k_phasesSEXP, SEXP target_acceptSEXP, SEXP max_treedepthSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< List >::type data(dataSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type init(initSEXP);
+    Rcpp::traits::input_parameter< int >::type n_iter(n_iterSEXP);
+    Rcpp::traits::input_parameter< int >::type n_warmup(n_warmupSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type n_dyn_coef(n_dyn_coefSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type n_trans_coef(n_trans_coefSEXP);
+    Rcpp::traits::input_parameter< int >::type k_phases(k_phasesSEXP);
+    Rcpp::traits::input_parameter< double >::type target_accept(target_acceptSEXP);
+    Rcpp::traits::input_parameter< int >::type max_treedepth(max_treedepthSEXP);
+    rcpp_result_gen = Rcpp::wrap(phaseR_nuts_sampler_k(data, init, n_iter, n_warmup, n_dyn_coef, n_trans_coef, k_phases, target_accept, max_treedepth));
+    return rcpp_result_gen;
+END_RCPP
+}
 // phase_log_likelihood
 double phase_log_likelihood(NumericVector params, List data, int n_trans_coef, int n_dyn_coef_0, int n_dyn_coef_1);
 RcppExport SEXP _phaseR_phase_log_likelihood(SEXP paramsSEXP, SEXP dataSEXP, SEXP n_trans_coefSEXP, SEXP n_dyn_coef_0SEXP, SEXP n_dyn_coef_1SEXP) {
@@ -160,16 +179,64 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// phase_log_likelihood_k
+double phase_log_likelihood_k(NumericVector params, List data, IntegerVector n_dyn_coef, IntegerVector n_trans_coef, int k_phases);
+RcppExport SEXP _phaseR_phase_log_likelihood_k(SEXP paramsSEXP, SEXP dataSEXP, SEXP n_dyn_coefSEXP, SEXP n_trans_coefSEXP, SEXP k_phasesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type params(paramsSEXP);
+    Rcpp::traits::input_parameter< List >::type data(dataSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type n_dyn_coef(n_dyn_coefSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type n_trans_coef(n_trans_coefSEXP);
+    Rcpp::traits::input_parameter< int >::type k_phases(k_phasesSEXP);
+    rcpp_result_gen = Rcpp::wrap(phase_log_likelihood_k(params, data, n_dyn_coef, n_trans_coef, k_phases));
+    return rcpp_result_gen;
+END_RCPP
+}
+// phase_log_prior_k
+double phase_log_prior_k(NumericVector params, IntegerVector n_dyn_coef, IntegerVector n_trans_coef, int k_phases);
+RcppExport SEXP _phaseR_phase_log_prior_k(SEXP paramsSEXP, SEXP n_dyn_coefSEXP, SEXP n_trans_coefSEXP, SEXP k_phasesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type params(paramsSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type n_dyn_coef(n_dyn_coefSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type n_trans_coef(n_trans_coefSEXP);
+    Rcpp::traits::input_parameter< int >::type k_phases(k_phasesSEXP);
+    rcpp_result_gen = Rcpp::wrap(phase_log_prior_k(params, n_dyn_coef, n_trans_coef, k_phases));
+    return rcpp_result_gen;
+END_RCPP
+}
+// phase_log_posterior_k
+double phase_log_posterior_k(NumericVector params, List data, IntegerVector n_dyn_coef, IntegerVector n_trans_coef, int k_phases);
+RcppExport SEXP _phaseR_phase_log_posterior_k(SEXP paramsSEXP, SEXP dataSEXP, SEXP n_dyn_coefSEXP, SEXP n_trans_coefSEXP, SEXP k_phasesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type params(paramsSEXP);
+    Rcpp::traits::input_parameter< List >::type data(dataSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type n_dyn_coef(n_dyn_coefSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type n_trans_coef(n_trans_coefSEXP);
+    Rcpp::traits::input_parameter< int >::type k_phases(k_phasesSEXP);
+    rcpp_result_gen = Rcpp::wrap(phase_log_posterior_k(params, data, n_dyn_coef, n_trans_coef, k_phases));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_phaseR_phaseR_nuts_sampler", (DL_FUNC) &_phaseR_phaseR_nuts_sampler, 9},
     {"_phaseR_phaseR_nuts_sampler_re", (DL_FUNC) &_phaseR_phaseR_nuts_sampler_re, 15},
+    {"_phaseR_phaseR_nuts_sampler_k", (DL_FUNC) &_phaseR_phaseR_nuts_sampler_k, 9},
     {"_phaseR_phase_log_likelihood", (DL_FUNC) &_phaseR_phase_log_likelihood, 5},
     {"_phaseR_phase_log_prior", (DL_FUNC) &_phaseR_phase_log_prior, 4},
     {"_phaseR_phase_log_posterior", (DL_FUNC) &_phaseR_phase_log_posterior, 5},
     {"_phaseR_phase_log_likelihood_re", (DL_FUNC) &_phaseR_phase_log_likelihood_re, 11},
     {"_phaseR_phase_log_prior_re", (DL_FUNC) &_phaseR_phase_log_prior_re, 10},
     {"_phaseR_phase_log_posterior_re", (DL_FUNC) &_phaseR_phase_log_posterior_re, 11},
+    {"_phaseR_phase_log_likelihood_k", (DL_FUNC) &_phaseR_phase_log_likelihood_k, 5},
+    {"_phaseR_phase_log_prior_k", (DL_FUNC) &_phaseR_phase_log_prior_k, 4},
+    {"_phaseR_phase_log_posterior_k", (DL_FUNC) &_phaseR_phase_log_posterior_k, 5},
     {NULL, NULL, 0}
 };
 

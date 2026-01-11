@@ -1,3 +1,75 @@
+#' Extract fixed effects
+#'
+#' Returns posterior summaries of fixed effect coefficients.
+#'
+#' @param object A `phase_fit` object
+#' @param component Which component: "all" (default), "transition", or "dynamics"
+#' @param phase For dynamics, which phase (NULL for all)
+#'
+#' @return A data frame with fixed effect estimates
+#' @export
+#'
+fixef <- function(object, component = c("all", "transition", "dynamics"),
+                  phase = NULL) {
+
+  component <- match.arg(component)
+
+  if (!inherits(object, "phase_fit")) {
+    stop("Object must be a phase_fit", call. = FALSE)
+  }
+
+  draws <- object$draws
+  param_names <- object$param_names
+  phase_names <- object$model$phases$names
+
+  results <- list()
+
+  # Transition coefficients
+  if (component %in% c("all", "transition")) {
+    trans_idx <- grep("^beta_trans", param_names)
+    if (length(trans_idx) > 0) {
+      results$transition <- summarize_fixef(draws[, trans_idx, drop = FALSE])
+    }
+  }
+
+  # Dynamics coefficients
+  if (component %in% c("all", "dynamics")) {
+    phases_to_use <- if (is.null(phase)) phase_names else phase
+    for (p in phases_to_use) {
+      pattern <- sprintf("^beta_%s_", p)
+      dyn_idx <- grep(pattern, param_names)
+      if (length(dyn_idx) > 0) {
+        results[[paste0("dynamics_", p)]] <- summarize_fixef(draws[, dyn_idx, drop = FALSE])
+      }
+    }
+  }
+
+  if (length(results) == 1) {
+    return(results[[1]])
+  }
+  results
+}
+
+
+#' Summarize fixed effects draws
+#' @keywords internal
+summarize_fixef <- function(draws) {
+  summaries <- t(apply(draws, 2, function(x) {
+    c(mean = mean(x),
+      sd = sd(x),
+      `2.5%` = unname(quantile(x, 0.025)),
+      `50%` = unname(median(x)),
+      `97.5%` = unname(quantile(x, 0.975)))
+  }))
+
+  data.frame(
+    parameter = rownames(summaries),
+    summaries,
+    row.names = NULL
+  )
+}
+
+
 #' Extract random effects
 #'
 #' @param object A `phase_fit` object

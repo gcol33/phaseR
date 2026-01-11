@@ -1,3 +1,24 @@
+# phaseR 1.0.0
+
+First stable release.
+
+## New Features (since 0.5.0)
+
+* `fixef()`: Extract fixed effect estimates
+* `residuals()`: Compute response and Pearson residuals
+* `logLik()`, `nobs()`: Standard model accessors for AIC/BIC
+* `confint()`: Credible intervals for parameters
+* `waic()`, `compare_waic()`: Model comparison via WAIC
+* `prior()`: Prior specification interface (defaults documented)
+* `sim_phaseR_binomial()`: Simulate binomial phase data
+* Improved input validation with informative error messages
+
+## Bug Fixes
+
+* Fixed namespace imports for S3 method generics
+
+---
+
 # phaseR 0.5.0
 
 Initial release.

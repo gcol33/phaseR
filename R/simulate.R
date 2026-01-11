@@ -233,3 +233,77 @@ sim_phaseR_poisson <- function(n_units = 100,
 
   do.call(rbind, data_list)
 }
+
+
+#' Simulate Binomial data from a phase model
+#'
+#' @param n_units Number of units
+#' @param n_times Number of time points per unit
+#' @param n_trials Number of trials per observation
+#' @param beta_trans Transition coefficients
+#' @param beta_0 Phase 0 dynamics coefficients (logit scale)
+#' @param beta_1 Phase 1 dynamics coefficients (logit scale)
+#' @param seed Random seed
+#'
+#' @return A data frame suitable for `fit_phaseR()` with `family = binomial()`
+#' @export
+#'
+#' @examples
+#' dat <- sim_phaseR_binomial(n_units = 50, n_times = 5, n_trials = 10)
+#' head(dat)
+#'
+sim_phaseR_binomial <- function(n_units = 100,
+                                 n_times = 5,
+                                 n_trials = 10,
+                                 beta_trans = c(-1, 0.5),
+                                 beta_0 = c(0.5, 0),      # p ~ 0.62 at x=0
+                                 beta_1 = c(-0.5, 0.3),   # p ~ 0.38 at x=0
+                                 seed = NULL) {
+
+  if (!is.null(seed)) set.seed(seed)
+
+  # Ensure coefficients have x effect (default 0 if not provided)
+  if (length(beta_trans) == 1) beta_trans <- c(beta_trans, 0)
+  if (length(beta_0) == 1) beta_0 <- c(beta_0, 0)
+  if (length(beta_1) == 1) beta_1 <- c(beta_1, 0)
+
+  data_list <- lapply(seq_len(n_units), function(i) {
+
+    x <- rnorm(n_times)
+    phase <- integer(n_times)
+    y <- integer(n_times)
+
+    # Initial phase always 0
+    phase[1] <- 0
+    p_0 <- plogis(beta_0[1] + beta_0[2] * x[1])
+    y[1] <- rbinom(1, n_trials, p_0)
+
+    for (t in 2:n_times) {
+      if (phase[t - 1] == 0) {
+        p_trans <- plogis(beta_trans[1] + beta_trans[2] * x[t])
+        phase[t] <- rbinom(1, 1, p_trans)
+      } else {
+        phase[t] <- 1
+      }
+
+      if (phase[t] == 0) {
+        p <- plogis(beta_0[1] + beta_0[2] * x[t])
+        y[t] <- rbinom(1, n_trials, p)
+      } else {
+        p <- plogis(beta_1[1] + beta_1[2] * x[t])
+        y[t] <- rbinom(1, n_trials, p)
+      }
+    }
+
+    data.frame(
+      id = i,
+      time = seq_len(n_times),
+      x = x,
+      y = y,
+      n_trials = n_trials,
+      true_phase = phase
+    )
+  })
+
+  do.call(rbind, data_list)
+}

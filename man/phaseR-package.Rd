@@ -77,7 +77,7 @@ phaseR produces valid causal estimates.
 }
 
 \author{
-\strong{Maintainer}: Gilles Colling \email{gilles.colling@uclouvain.be}
+\strong{Maintainer}: Gilles Colling \email{gilles.colling05@gmail.com}
 
 }
 \keyword{internal}

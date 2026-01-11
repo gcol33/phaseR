@@ -243,3 +243,123 @@ coef.phase_fit <- function(object, ...) {
 fitted.phase_fit <- function(object, ...) {
   predict(object, type = "response")
 }
+
+
+#' Extract residuals from phase_fit
+#'
+#' Computes residuals (observed - fitted) marginalized over phase uncertainty.
+#'
+#' @param object A `phase_fit` object
+#' @param type Type of residuals: "response" (default) or "pearson"
+#' @param ... Additional arguments (unused)
+#'
+#' @return Numeric vector of residuals
+#' @export
+residuals.phase_fit <- function(object, type = c("response", "pearson"), ...) {
+
+  type <- match.arg(type)
+
+  y <- object$data[[object$model$dynamics[[1]]$response]]
+  fitted_vals <- fitted(object)
+
+  if (is.data.frame(fitted_vals)) {
+    fitted_vals <- fitted_vals$mean
+  }
+
+  resid <- y - fitted_vals
+
+  if (type == "pearson") {
+    # Get residual SD (weighted average of phase-specific SDs)
+    sigma_idx <- grep("^log_sigma_", object$param_names)
+    sigmas <- exp(colMeans(object$draws[, sigma_idx, drop = FALSE]))
+
+    # Use average sigma for simplicity
+    sigma_avg <- mean(sigmas)
+    resid <- resid / sigma_avg
+  }
+
+  resid
+}
+
+
+#' Number of observations in phase_fit
+#'
+#' @param object A `phase_fit` object
+#' @param ... Additional arguments (unused)
+#'
+#' @return Integer count of observations
+#' @export
+nobs.phase_fit <- function(object, ...) {
+  nrow(object$data)
+}
+
+
+#' Log-likelihood of phase_fit
+#'
+#' Returns the log-likelihood at the posterior mean.
+#'
+#' @param object A `phase_fit` object
+#' @param ... Additional arguments (unused)
+#'
+#' @return A logLik object
+#' @export
+logLik.phase_fit <- function(object, ...) {
+
+  # Get posterior mean parameters
+  params <- colMeans(object$draws)
+
+  # Compute log-likelihood at posterior mean
+  y <- object$data[[object$model$dynamics[[1]]$response]]
+  fitted_vals <- fitted(object)
+  if (is.data.frame(fitted_vals)) {
+    fitted_vals <- fitted_vals$mean
+  }
+
+  # Get sigma (average of phase-specific)
+  sigma_idx <- grep("^log_sigma_", object$param_names)
+  sigmas <- exp(colMeans(object$draws[, sigma_idx, drop = FALSE]))
+  sigma_avg <- mean(sigmas)
+
+  # Compute log-likelihood assuming Gaussian
+  ll <- sum(dnorm(y, fitted_vals, sigma_avg, log = TRUE))
+
+  # Number of parameters (excluding random effects for df)
+  n_fixed <- sum(!grepl("^u_|^v_", object$param_names))
+
+  structure(ll,
+            df = n_fixed,
+            nobs = nobs(object),
+            class = "logLik")
+}
+
+
+#' Confidence intervals for phase_fit parameters
+#'
+#' Returns credible intervals from the posterior distribution.
+#'
+#' @param object A `phase_fit` object
+#' @param parm Character vector of parameter names (NULL for all)
+#' @param level Credible interval level (default 0.95)
+#' @param ... Additional arguments (unused)
+#'
+#' @return Matrix with lower and upper bounds
+#' @export
+confint.phase_fit <- function(object, parm = NULL, level = 0.95, ...) {
+
+  alpha <- (1 - level) / 2
+  probs <- c(alpha, 1 - alpha)
+
+  draws <- object$draws
+
+  if (!is.null(parm)) {
+    idx <- which(object$param_names %in% parm)
+    if (length(idx) == 0) {
+      stop("No matching parameters found", call. = FALSE)
+    }
+    draws <- draws[, idx, drop = FALSE]
+  }
+
+  ci <- t(apply(draws, 2, quantile, probs = probs))
+  colnames(ci) <- paste0(probs * 100, "%")
+  ci
+}

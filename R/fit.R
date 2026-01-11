@@ -7,6 +7,7 @@
 #' @param warmup Warmup iterations per chain (default iter/2)
 #' @param backend Estimation backend: "hmc" (default) or "laplace"
 #' @param cores Number of cores for parallel chains (default 1)
+#' @param prior Prior specification from `prior()` (default: weakly informative)
 #' @param seed Random seed for reproducibility
 #' @param ... Additional arguments passed to backend
 #'
@@ -32,10 +33,17 @@ fit_phaseR <- function(model,
                        warmup = floor(iter / 2),
                        backend = c("hmc", "laplace"),
                        cores = 1,
+                       prior = NULL,
                        seed = NULL,
                        ...) {
 
   backend <- match.arg(backend)
+
+  # Check prior specification
+
+  if (!is.null(prior) && !is_default_prior(prior)) {
+    message("Note: Custom priors specified but not yet fully supported. Using defaults.")
+  }
 
   # Validate
   validate_model_data(model, data)

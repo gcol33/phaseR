@@ -12,6 +12,7 @@ fit_phaseR(
   warmup = floor(iter/2),
   backend = c("hmc", "laplace"),
   cores = 1,
+  prior = NULL,
   seed = NULL,
   ...
 )
@@ -30,6 +31,8 @@ fit_phaseR(
 \item{backend}{Estimation backend: "hmc" (default) or "laplace"}
 
 \item{cores}{Number of cores for parallel chains (default 1)}
+
+\item{prior}{Prior specification from \code{prior()} (default: weakly informative)}
 
 \item{seed}{Random seed for reproducibility}
 

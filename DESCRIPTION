@@ -1,6 +1,6 @@
 Package: phaseR
 Title: Phase-Structured Inference for Longitudinal Change
-Version: 0.2.0
+Version: 0.7.0
 Authors@R:
     person("Gilles", "Colling", , "gilles.colling@uclouvain.be", role = c("aut", "cre"))
 Description: A framework for analysing change in longitudinal data that
@@ -21,6 +21,9 @@ LinkingTo:
     Rcpp
 Suggests:
     testthat (>= 3.0.0),
-    parallel
+    parallel,
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
 Config/testthat/edition: 3
 Language: en-US

@@ -1,0 +1,188 @@
+---
+title: "Why Conditioning on Realized Change Fails"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Why Conditioning on Realized Change Fails}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+## The Problem
+
+A common analytical pattern in longitudinal data is to:
+
+1. Observe when a unit "changes" (e.g., onset of disease, adoption of treatment)
+2. Compare outcomes before vs. after the change
+3. Attribute the difference to the "effect" of the change
+
+**This is not a valid estimand.** The key insight of phaseR is:
+
+> Inference conditional on realized change is not an estimand.
+
+## Why? Selection Bias in Phase Transitions
+
+Consider a simple example. Units transition from "inactive" to "active" with
+probability depending on a covariate $x$:
+
+$$P(\text{transition} | x) = \text{logit}^{-1}(\beta_0 + \beta_1 x)$$
+
+And outcomes depend on phase and $x$:
+
+- Inactive: $y \sim N(\mu_0 + \gamma_0 x, \sigma_0^2)$
+- Active: $y \sim N(\mu_1 + \gamma_1 x, \sigma_1^2)$
+
+The problem: **which units we observe in each phase is not random**. Units with
+certain $x$ values are more likely to transition. If we naively compare
+"before" vs "after" outcomes, we confound the phase effect with the selection
+effect.
+
+## A Simulation Demonstration
+
+```{r simulation}
+library(phaseR)
+set.seed(42)
+
+# Simulate data where transition probability depends on x
+# and outcomes depend on both phase AND x
+n_units <- 200
+n_times <- 6
+
+# True parameters
+beta_trans <- c(-1.5, 1.2)  # x increases transition probability
+beta_inactive <- c(10, 2)   # y = 10 + 2*x in inactive phase
+beta_active <- c(8, 2)      # y = 8 + 2*x in active phase (same slope!)
+# True "effect" of activation = -2 (intercept shift only)
+
+dat <- sim_phaseR(
+  n_units = n_units,
+  n_times = n_times,
+  beta_trans = beta_trans,
+  beta_0 = beta_inactive,
+  beta_1 = beta_active,
+  sigma_0 = 1.5,
+  sigma_1 = 1.5,
+  seed = 123
+)
+
+# How many units transitioned?
+n_transitioned <- length(unique(dat$id[dat$true_phase == 1]))
+cat("Units that transitioned:", n_transitioned, "of", n_units, "\n")
+```
+
+## The Naive Analysis: Before-After Comparison
+
+A researcher might analyze only the units that transitioned, comparing their
+outcomes before vs after:
+
+```{r naive-analysis}
+# Get units that transitioned
+transitioned_ids <- unique(dat$id[dat$true_phase == 1])
+
+# For each transitioned unit, compare before vs after
+naive_effects <- sapply(transitioned_ids, function(uid) {
+  unit_dat <- dat[dat$id == uid, ]
+
+  # Find transition point
+  trans_time <- min(which(unit_dat$true_phase == 1))
+
+  # Average outcome before (if any observations in phase 0)
+  before_obs <- unit_dat$true_phase == 0
+  after_obs <- unit_dat$true_phase == 1
+
+  if (sum(before_obs) > 0 && sum(after_obs) > 0) {
+    mean(unit_dat$y[after_obs]) - mean(unit_dat$y[before_obs])
+  } else {
+    NA
+  }
+})
+
+naive_ate <- mean(naive_effects, na.rm = TRUE)
+cat("Naive before-after estimate:", round(naive_ate, 2), "\n")
+cat("True effect:", -2, "\n")
+cat("Bias:", round(naive_ate - (-2), 2), "\n")
+```
+
+**The naive estimate is biased!** This is because units that transitioned had
+systematically different $x$ values than those that didn't, and $x$ affects
+both transition probability and outcomes.
+
+## Why Does This Happen?
+
+The selection mechanism creates confounding:
+
+```{r selection-viz}
+# Compare x values for transitioned vs non-transitioned units
+transitioned <- dat$id %in% transitioned_ids
+dat_first <- dat[dat$time == 1, ]
+dat_first$transitioned <- dat_first$id %in% transitioned_ids
+
+cat("Mean x for transitioned units:",
+    round(mean(dat_first$x[dat_first$transitioned]), 2), "\n")
+cat("Mean x for non-transitioned units:",
+    round(mean(dat_first$x[!dat_first$transitioned]), 2), "\n")
+```
+
+Units with higher $x$ are more likely to transition (because $\beta_1 > 0$).
+Since $x$ also affects outcomes (slope = 2 in both phases), the "before"
+observations for transitioned units have systematically higher $y$ than
+we'd expect by chance.
+
+## The phaseR Solution
+
+phaseR models the **generative process** - both the transition mechanism and
+the outcome dynamics - and integrates over phase uncertainty:
+
+```{r phaser-analysis}
+model <- phase_model(
+  phases("inactive", "active"),
+  transition("inactive", "active", ~ x),
+  dynamics("inactive", y ~ x),
+  dynamics("active", y ~ x)
+)
+
+# Fit the model (using short chain for vignette)
+fit <- fit_phaseR(model, data = dat, chains = 1, iter = 500, warmup = 250, seed = 456)
+
+# Extract the effect (difference in intercepts)
+beta_inactive_est <- mean(fit$draws[, "beta_inactive_(Intercept)"])
+beta_active_est <- mean(fit$draws[, "beta_active_(Intercept)"])
+phaser_effect <- beta_active_est - beta_inactive_est
+
+cat("phaseR estimate of effect:", round(phaser_effect, 2), "\n")
+cat("True effect:", -2, "\n")
+cat("Bias:", round(phaser_effect - (-2), 2), "\n")
+```
+
+## Key Takeaways
+
+1. **Before-after comparisons condition on realized transitions**, which
+   introduces selection bias when transition probability depends on covariates.
+
+2. **The "effect" from naive analysis is not a valid causal estimand** - it
+   conflates the true phase effect with selection effects.
+
+3. **phaseR models the complete generative process**, properly accounting for
+   the selection mechanism and producing valid inference.
+
+4. **This applies broadly**: disease onset studies, technology adoption,
+   behavioral change, ecological regime shifts, etc. Any analysis that
+   stratifies by realized outcomes risks this bias.
+
+## When Is Naive Analysis Valid?
+
+The naive before-after approach is unbiased only when:
+
+- Transition probability is independent of all variables that affect outcomes
+- Or, all such variables are perfectly controlled for
+
+In practice, this is rarely satisfied. phaseR provides a principled alternative
+that doesn't require these strong assumptions.

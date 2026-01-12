@@ -189,9 +189,14 @@ summarize_re <- function(draws, levels) {
 
 #' Extract variance components
 #'
+#' Returns variance-covariance information for random effects.
+#' For random intercepts, returns the SD. For random slopes,
+#' returns the full covariance matrix (correlated) or diagonal
+#' variances (uncorrelated).
+#'
 #' @param object A `phase_fit` object
 #'
-#' @return A data frame with variance component estimates
+#' @return A list with variance component estimates by term
 #' @export
 #'
 VarCorr <- function(object) {
@@ -205,28 +210,125 @@ VarCorr <- function(object) {
     return(NULL)
   }
 
-  # Find variance parameters
+  results <- list()
+
+  # Find variance parameters - both log_sigma and L (Cholesky)
   sigma_idx <- grep("^log_sigma_.*_re", object$param_names)
-  if (length(sigma_idx) == 0) return(NULL)
+  L_idx <- grep("^L_", object$param_names)
 
-  draws <- object$draws[, sigma_idx, drop = FALSE]
+  # Process log_sigma parameters (intercept-only or uncorrelated)
+  if (length(sigma_idx) > 0) {
+    draws <- object$draws[, sigma_idx, drop = FALSE]
+    sd_draws <- exp(draws)
 
-  # Convert from log to actual SD
-  sd_draws <- exp(draws)
+    for (i in seq_along(sigma_idx)) {
+      param_name <- object$param_names[sigma_idx[i]]
+      comp_name <- gsub("log_sigma_(.*)_re.*", "\\1", param_name)
+      group_name <- gsub(".*_re_(.*)$", "\\1", param_name)
+      # Check if this is a slope-specific sigma
+      if (grepl("_re_.*_", param_name)) {
+        coef_name <- gsub(".*_re_[^_]+_(.*)$", "\\1", param_name)
+        full_name <- paste(comp_name, group_name, coef_name, sep = "_")
+      } else {
+        full_name <- paste(comp_name, group_name, sep = "_")
+      }
 
-  summaries <- t(apply(sd_draws, 2, function(x) {
-    c(sd = mean(x),
-      sd.sd = sd(x),
-      `2.5%` = unname(quantile(x, 0.025)),
-      `97.5%` = unname(quantile(x, 0.975)))
-  }))
+      sd_vec <- sd_draws[, i]
+      results[[full_name]] <- list(
+        type = "sd",
+        sd = mean(sd_vec),
+        sd.sd = sd(sd_vec),
+        `2.5%` = unname(quantile(sd_vec, 0.025)),
+        `97.5%` = unname(quantile(sd_vec, 0.975))
+      )
+    }
+  }
 
-  # Clean up names
-  comp_names <- gsub("log_sigma_(.*)_re", "\\1", colnames(draws))
+  # Process Cholesky parameters (correlated slopes)
+  if (length(L_idx) > 0) {
+    L_names <- object$param_names[L_idx]
 
-  data.frame(
-    component = comp_names,
-    summaries,
-    row.names = NULL
-  )
+    # Group by term (e.g., L_baseline_re_site_1_1, L_baseline_re_site_2_1, ...)
+    # Extract unique term identifiers
+    term_patterns <- unique(gsub("^(L_[^_]+_re_[^_]+)_.*", "\\1", L_names))
+
+    for (term_pat in term_patterns) {
+      term_L_idx <- grep(paste0("^", term_pat, "_"), object$param_names)
+      n_L <- length(term_L_idx)
+
+      # Determine dimension from number of Cholesky elements
+      # n_L = dim * (dim + 1) / 2, so dim = (-1 + sqrt(1 + 8*n_L)) / 2
+      dim <- as.integer((-1 + sqrt(1 + 8 * n_L)) / 2)
+
+      # Extract L draws and compute covariance: Sigma = L * L'
+      L_draws <- object$draws[, term_L_idx, drop = FALSE]
+      n_samples <- nrow(L_draws)
+
+      # Compute covariance matrix for each sample
+      cov_samples <- array(0, dim = c(dim, dim, n_samples))
+
+      for (s in seq_len(n_samples)) {
+        # Reconstruct L matrix
+        L <- matrix(0, dim, dim)
+        k <- 1
+        for (j in seq_len(dim)) {
+          for (i in j:dim) {
+            L[i, j] <- L_draws[s, k]
+            k <- k + 1
+          }
+        }
+        cov_samples[, , s] <- L %*% t(L)
+      }
+
+      # Compute posterior mean covariance
+      cov_mean <- apply(cov_samples, c(1, 2), mean)
+      cov_sd <- apply(cov_samples, c(1, 2), sd)
+
+      # Compute correlation matrix
+      sds <- sqrt(diag(cov_mean))
+      cor_mean <- cov_mean / outer(sds, sds)
+
+      comp_name <- gsub("^L_([^_]+)_re_.*", "\\1", term_pat)
+      group_name <- gsub("^L_[^_]+_re_(.*)$", "\\1", term_pat)
+      full_name <- paste(comp_name, group_name, sep = "_")
+
+      results[[full_name]] <- list(
+        type = "cov",
+        cov = cov_mean,
+        cov.sd = cov_sd,
+        cor = cor_mean,
+        sd = sds
+      )
+    }
+  }
+
+  if (length(results) == 0) return(NULL)
+
+  structure(results, class = "VarCorr_phaseR")
+}
+
+
+#' Print method for VarCorr
+#' @export
+print.VarCorr_phaseR <- function(x, ...) {
+
+  for (name in names(x)) {
+    cat("Random effect:", name, "\n")
+    item <- x[[name]]
+
+    if (item$type == "sd") {
+      cat(sprintf("  StdDev: %.4f (SE: %.4f)\n", item$sd, item$sd.sd))
+      cat(sprintf("  95%% CI: [%.4f, %.4f]\n", item$`2.5%`, item$`97.5%`))
+    } else if (item$type == "cov") {
+      cat("  StdDevs:\n")
+      for (i in seq_along(item$sd)) {
+        cat(sprintf("    [%d]: %.4f\n", i, item$sd[i]))
+      }
+      cat("  Correlations:\n")
+      print(round(item$cor, 3))
+    }
+    cat("\n")
+  }
+
+  invisible(x)
 }

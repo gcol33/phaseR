@@ -17,6 +17,7 @@ List with:
 \item \code{n_re_terms}: Number of RE terms
 \item \code{re_list}: List of RE structures (one per term)
 \item \code{total_re_params}: Total number of RE parameters
+\item \code{has_slopes}: Whether any term has slopes
 }
 }
 \description{

@@ -1,3 +1,27 @@
+# phaseR 1.0.2
+
+## New Features
+
+* **Random slopes**: Support for `(1 + x | group)` and `(1 + x || group)` syntax
+  - Correlated random intercepts and slopes via Cholesky parameterization
+  - Uncorrelated random slopes via `||` syntax with diagonal covariance
+  - Slope-only RE via `(0 + x | group)` or `(x | group)`
+  - Multiple slope variables: `(1 + x + z | group)`
+  - LKJ prior on correlation matrix for correlated slopes
+
+* **Enhanced VarCorr()**: Returns full covariance matrix for correlated slopes
+  - Standard deviations and correlations from posterior
+  - Pretty-print method for variance components
+
+## Internal Changes
+
+* New `parse_re_term()` function for parsing slope terms
+* New `build_re_z_matrix()` for constructing RE design matrices
+* Added `phase_likelihood_slopes.cpp` and `hmc_sampler_slopes.cpp`
+* Extended parameter naming for slope coefficients and Cholesky factors
+
+---
+
 # phaseR 1.0.1
 
 ## New Features

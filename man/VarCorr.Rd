@@ -10,8 +10,11 @@ VarCorr(object)
 \item{object}{A \code{phase_fit} object}
 }
 \value{
-A data frame with variance component estimates
+A list with variance component estimates by term
 }
 \description{
-Extract variance components
+Returns variance-covariance information for random effects.
+For random intercepts, returns the SD. For random slopes,
+returns the full covariance matrix (correlated) or diagonal
+variances (uncorrelated).
 }

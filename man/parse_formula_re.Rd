@@ -7,7 +7,7 @@
 parse_formula_re(formula)
 }
 \arguments{
-\item{formula}{A formula potentially containing \code{(1 | group)} terms}
+\item{formula}{A formula potentially containing random effect terms}
 }
 \value{
 A list with:
@@ -17,10 +17,17 @@ A list with:
 \item \code{re_terms}: List of RE specifications (one per term)
 \item \code{n_re_terms}: Number of RE terms
 \item \code{re_groups}: Character vector of group names (for backward compat)
+\item \code{has_slopes}: Logical, TRUE if any RE term has slopes
 }
 }
 \description{
-Parses formulas with one or more random intercept terms.
-Supports: \code{y ~ x + (1|site) + (1|year)}
+Parses formulas with random intercept and/or slope terms.
+Supports:
+\itemize{
+\item \code{y ~ x + (1|site)} - random intercept
+\item \code{y ~ x + (1 + x|site)} - correlated random intercept and slope
+\item \code{y ~ x + (1 + x||site)} - uncorrelated random intercept and slope
+\item \code{y ~ x + (0 + x|site)} or \code{(x|site)} - random slope only
+}
 }
 \keyword{internal}

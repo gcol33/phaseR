@@ -1,6 +1,6 @@
 Package: phaseR
 Title: Phase-Structured Inference for Longitudinal Change
-Version: 1.0.1
+Version: 1.0.2
 Authors@R:
     person("Gilles", "Colling", , "gilles.colling05@gmail.com", role = c("aut", "cre"))
 Description: A framework for analysing change in longitudinal data that

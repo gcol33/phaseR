@@ -1,9 +1,13 @@
 #' Parse formula for random effects
 #'
-#' Parses formulas with one or more random intercept terms.
-#' Supports: `y ~ x + (1|site) + (1|year)`
+#' Parses formulas with random intercept and/or slope terms.
+#' Supports:
+#' - `y ~ x + (1|site)` - random intercept
+#' - `y ~ x + (1 + x|site)` - correlated random intercept and slope
+#' - `y ~ x + (1 + x||site)` - uncorrelated random intercept and slope
+#' - `y ~ x + (0 + x|site)` or `(x|site)` - random slope only
 #'
-#' @param formula A formula potentially containing `(1 | group)` terms
+#' @param formula A formula potentially containing random effect terms
 #'
 #' @return A list with:
 #'   - `fixed_formula`: Formula without RE terms
@@ -11,16 +15,17 @@
 #'   - `re_terms`: List of RE specifications (one per term)
 #'   - `n_re_terms`: Number of RE terms
 #'   - `re_groups`: Character vector of group names (for backward compat)
+#'   - `has_slopes`: Logical, TRUE if any RE term has slopes
 #'
 #' @keywords internal
 #'
 parse_formula_re <- function(formula) {
 
-
   formula_str <- deparse(formula, width.cutoff = 500)
 
-  # Detect (1 | group) pattern
-  re_pattern <- "\\(\\s*1\\s*\\|\\s*([a-zA-Z_][a-zA-Z0-9_.]*)\\s*\\)"
+  # Pattern for RE terms: (... | group) or (... || group)
+  # Captures: full match, content before bar, bar type (| or ||), group name
+  re_pattern <- "\\(\\s*([^|]+?)\\s*(\\|\\|?)\\s*([a-zA-Z_][a-zA-Z0-9_.]*)\\s*\\)"
   re_matches <- gregexpr(re_pattern, formula_str, perl = TRUE)
 
   if (re_matches[[1]][1] == -1) {
@@ -30,32 +35,39 @@ parse_formula_re <- function(formula) {
       has_re = FALSE,
       re_terms = list(),
       n_re_terms = 0L,
-      re_groups = character(0)
+      re_groups = character(0),
+      has_slopes = FALSE
     ))
   }
 
-  # Extract group names
+  # Extract all RE term strings
   re_terms_str <- regmatches(formula_str, re_matches)[[1]]
-  group_names <- gsub(re_pattern, "\\1", re_terms_str, perl = TRUE)
 
-  # Build structured RE term list
-  re_terms <- lapply(seq_along(group_names), function(i) {
-    list(
-      group = group_names[i],
-      type = "intercept",
-      term_idx = i
-    )
-  })
-  names(re_terms) <- group_names
+  # Parse each RE term
+  re_terms <- list()
+  group_names <- character(0)
+  has_slopes <- FALSE
+
+  for (i in seq_along(re_terms_str)) {
+    term_str <- re_terms_str[i]
+    parsed <- parse_re_term(term_str)
+    group_names <- c(group_names, parsed$group)
+    parsed$term_idx <- i
+    re_terms[[parsed$group]] <- parsed
+    if (parsed$type != "intercept") {
+      has_slopes <- TRUE
+    }
+  }
 
   # Remove RE terms from formula to get fixed-effects formula
-  fixed_str <- gsub("\\+?\\s*\\(\\s*1\\s*\\|\\s*[^)]+\\)", "", formula_str)
+  fixed_str <- gsub("\\+?\\s*\\([^)]*\\|\\|?[^)]+\\)", "", formula_str)
   fixed_str <- gsub("~\\s*\\+", "~", fixed_str)  # Clean up leading +
   fixed_str <- trimws(fixed_str)
 
   if (fixed_str == "~" || fixed_str == "") {
     fixed_str <- "~ 1"
   }
+
 
   # Handle two-sided formulas
   if (grepl("^[^~]+~", fixed_str)) {
@@ -71,7 +83,79 @@ parse_formula_re <- function(formula) {
     has_re = TRUE,
     re_terms = re_terms,
     n_re_terms = length(re_terms),
-    re_groups = unique(group_names)
+    re_groups = unique(group_names),
+    has_slopes = has_slopes
+  )
+}
+
+
+#' Parse a single RE term string
+#'
+#' @param term_str String like "(1 + x | group)" or "(1 + x || group)"
+#' @return List with group, type, vars, correlated
+#' @keywords internal
+#'
+parse_re_term <- function(term_str) {
+
+  # Extract parts: content | group or content || group
+  pattern <- "\\(\\s*(.+?)\\s*(\\|\\|?)\\s*([a-zA-Z_][a-zA-Z0-9_.]*)\\s*\\)"
+  match <- regmatches(term_str, regexec(pattern, term_str, perl = TRUE))[[1]]
+
+  if (length(match) < 4) {
+    stop("Invalid random effect term: ", term_str, call. = FALSE)
+  }
+
+  content <- trimws(match[2])
+  bar_type <- match[3]
+  group <- match[4]
+
+  correlated <- (bar_type == "|")
+
+  # Parse content to extract variables
+  # Possible forms:
+  # "1" -> intercept only
+
+  # "1 + x" or "1 + x + z" -> intercept + slopes
+  # "0 + x" or "x" -> slope only (no intercept)
+
+  # Split on + and clean up
+  parts <- strsplit(content, "\\+")[[1]]
+  parts <- trimws(parts)
+  parts <- parts[parts != ""]
+
+  has_intercept <- FALSE
+  slope_vars <- character(0)
+
+  for (p in parts) {
+    if (p == "1") {
+      has_intercept <- TRUE
+    } else if (p == "0") {
+      # Explicit no intercept
+      has_intercept <- FALSE
+    } else {
+      # It's a variable name
+      slope_vars <- c(slope_vars, p)
+    }
+  }
+
+  # Determine type
+  if (has_intercept && length(slope_vars) == 0) {
+    type <- "intercept"
+  } else if (has_intercept && length(slope_vars) > 0) {
+    type <- "intercept_slope"
+  } else if (!has_intercept && length(slope_vars) > 0) {
+    type <- "slope"
+  } else {
+    stop("Invalid random effect specification: ", term_str, call. = FALSE)
+  }
+
+  list(
+    group = group,
+    type = type,
+    has_intercept = has_intercept,
+    slope_vars = slope_vars,
+    correlated = correlated,
+    n_coefs = as.integer(has_intercept) + length(slope_vars)
   )
 }
 
@@ -113,33 +197,102 @@ build_re_index <- function(data, group_var) {
 #'   - `n_re_terms`: Number of RE terms
 #'   - `re_list`: List of RE structures (one per term)
 #'   - `total_re_params`: Total number of RE parameters
+#'   - `has_slopes`: Whether any term has slopes
 #'
 #' @keywords internal
 #'
 build_multi_re <- function(data, re_terms) {
 
- if (length(re_terms) == 0) {
+  if (length(re_terms) == 0) {
     return(list(
       n_re_terms = 0L,
       re_list = list(),
-      total_re_params = 0L
+      total_re_params = 0L,
+      has_slopes = FALSE
     ))
   }
 
+  has_slopes <- FALSE
   re_list <- lapply(re_terms, function(term) {
     re_info <- build_re_index(data, term$group)
     re_info$group_var <- term$group
     re_info$type <- term$type
+    re_info$has_intercept <- term$has_intercept
+    re_info$slope_vars <- term$slope_vars
+    re_info$correlated <- term$correlated
+    re_info$n_coefs <- term$n_coefs
+
+    # Build Z matrix if there are slopes
+    if (term$type != "intercept") {
+      has_slopes <<- TRUE
+      re_info$Z <- build_re_z_matrix(data, term)
+    } else {
+      re_info$Z <- NULL
+    }
+
     re_info
   })
   names(re_list) <- names(re_terms)
 
-  # Total RE params: sum of n_groups + one sigma per term
-  total_re_params <- sum(vapply(re_list, function(x) x$n_groups + 1L, integer(1)))
+  # Calculate total RE parameters
+  # For each term:
+  #   - n_groups * n_coefs raw RE values
+  #   - Variance params: correlated uses Cholesky (n_coefs*(n_coefs+1)/2)
+  #                      uncorrelated uses diagonal (n_coefs)
+  total_re_params <- sum(vapply(re_list, function(x) {
+    n_raw <- x$n_groups * x$n_coefs
+    if (x$n_coefs == 1) {
+      # Just intercept: 1 log_sigma
+      n_var <- 1L
+    } else if (x$correlated) {
+      # Correlated: Cholesky lower triangle
+      n_var <- x$n_coefs * (x$n_coefs + 1L) / 2L
+    } else {
+      # Uncorrelated: diagonal variances
+      n_var <- x$n_coefs
+    }
+    as.integer(n_raw + n_var)
+  }, integer(1)))
 
   list(
     n_re_terms = length(re_list),
     re_list = re_list,
-    total_re_params = total_re_params
+    total_re_params = total_re_params,
+    has_slopes = has_slopes
   )
+}
+
+
+#' Build Z matrix (RE design matrix) for a term with slopes
+#'
+#' @param data Data frame
+#' @param term RE term specification
+#'
+#' @return Matrix with n_obs rows and n_coefs columns
+#' @keywords internal
+#'
+build_re_z_matrix <- function(data, term) {
+
+  n_obs <- nrow(data)
+  n_coefs <- term$n_coefs
+
+  Z <- matrix(0, nrow = n_obs, ncol = n_coefs)
+  col_idx <- 1
+
+  # Intercept column (all 1s)
+  if (term$has_intercept) {
+    Z[, col_idx] <- 1
+    col_idx <- col_idx + 1
+  }
+
+  # Slope columns
+  for (var in term$slope_vars) {
+    if (!var %in% names(data)) {
+      stop(sprintf("Slope variable '%s' not found in data", var), call. = FALSE)
+    }
+    Z[, col_idx] <- data[[var]]
+    col_idx <- col_idx + 1
+  }
+
+  Z
 }

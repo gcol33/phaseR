@@ -21,6 +21,10 @@ phaseR_nuts_sampler_multi_re <- function(data, init, n_iter, n_warmup, n_trans_c
     .Call(`_phaseR_phaseR_nuts_sampler_multi_re`, data, init, n_iter, n_warmup, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, trans_re_info, dyn_re_info_0, dyn_re_info_1, target_accept, max_treedepth)
 }
 
+phaseR_nuts_sampler_slopes <- function(data, init, n_iter, n_warmup, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, trans_re_info, dyn_re_info_0, dyn_re_info_1) {
+    .Call(`_phaseR_phaseR_nuts_sampler_slopes`, data, init, n_iter, n_warmup, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, trans_re_info, dyn_re_info_0, dyn_re_info_1)
+}
+
 phase_log_likelihood <- function(params, data, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1) {
     .Call(`_phaseR_phase_log_likelihood`, params, data, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1)
 }
@@ -79,5 +83,17 @@ phase_log_prior_multi_re <- function(params, n_trans_coef, n_dyn_coef_0, n_dyn_c
 
 phase_log_posterior_multi_re <- function(params, data, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, trans_re_info, dyn_re_info_0, dyn_re_info_1) {
     .Call(`_phaseR_phase_log_posterior_multi_re`, params, data, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, trans_re_info, dyn_re_info_0, dyn_re_info_1)
+}
+
+phase_log_likelihood_slopes <- function(params, data, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, trans_re_info, dyn_re_info_0, dyn_re_info_1) {
+    .Call(`_phaseR_phase_log_likelihood_slopes`, params, data, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, trans_re_info, dyn_re_info_0, dyn_re_info_1)
+}
+
+phase_log_prior_slopes <- function(params, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, trans_re_info, dyn_re_info_0, dyn_re_info_1) {
+    .Call(`_phaseR_phase_log_prior_slopes`, params, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, trans_re_info, dyn_re_info_0, dyn_re_info_1)
+}
+
+phase_log_posterior_slopes <- function(params, data, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, trans_re_info, dyn_re_info_0, dyn_re_info_1) {
+    .Call(`_phaseR_phase_log_posterior_slopes`, params, data, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, trans_re_info, dyn_re_info_0, dyn_re_info_1)
 }
 

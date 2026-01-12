@@ -97,13 +97,39 @@ run_nuts_chain <- function(stan_data, init, iter, warmup, ...) {
       n_trials_1 = stan_data$n_trials_1
     )
   } else if (isTRUE(stan_data$has_re)) {
+    # Check for slopes
+    has_slopes <- isTRUE(stan_data$has_slopes)
+
     # Check for multi-RE (more than one RE term in any component)
     has_multi_re <- (stan_data$trans_re_multi$n_re_terms > 1) ||
                     (stan_data$dyn_re_multi_0$n_re_terms > 1) ||
                     (stan_data$dyn_re_multi_1$n_re_terms > 1)
 
-    if (has_multi_re) {
-      # Multi-RE sampler
+    if (has_slopes) {
+      # Random slopes sampler (v1.0.2+)
+      result <- phaseR_nuts_sampler_slopes(
+        data = list(
+          id = stan_data$id,
+          time = stan_data$time,
+          y = stan_data$y,
+          X_trans = stan_data$X_trans,
+          X_dyn = stan_data$X_dyn,
+          n_units = stan_data$n_units,
+          unit_start = stan_data$unit_start,
+          unit_end = stan_data$unit_end
+        ),
+        init = init,
+        n_iter = as.integer(iter),
+        n_warmup = as.integer(warmup),
+        n_trans_coef = stan_data$n_trans_coef,
+        n_dyn_coef_0 = stan_data$n_dyn_coef_0,
+        n_dyn_coef_1 = stan_data$n_dyn_coef_1,
+        trans_re_info = build_re_info_for_cpp(stan_data$trans_re_multi),
+        dyn_re_info_0 = build_re_info_for_cpp(stan_data$dyn_re_multi_0),
+        dyn_re_info_1 = build_re_info_for_cpp(stan_data$dyn_re_multi_1)
+      )
+    } else if (has_multi_re) {
+      # Multi-RE sampler (intercepts only)
       result <- phaseR_nuts_sampler_multi_re(
         data = list(
           id = stan_data$id,
@@ -193,7 +219,7 @@ run_nuts_chain <- function(stan_data, init, iter, warmup, ...) {
 #' Converts R multi-RE structure to format expected by C++ sampler
 #'
 #' @param re_multi Multi-RE structure from build_multi_re()
-#' @return List with n_terms, n_groups_vec, idx_list
+#' @return List with n_terms, n_groups_vec, idx_list, and slope info
 #' @keywords internal
 build_re_info_for_cpp <- function(re_multi) {
   n_terms <- re_multi$n_re_terms
@@ -202,17 +228,35 @@ build_re_info_for_cpp <- function(re_multi) {
     return(list(
       n_terms = 0L,
       n_groups_vec = integer(0),
-      idx_list = list()
+      n_coefs_vec = integer(0),
+      idx_list = list(),
+      Z_list = list(),
+      correlated_vec = logical(0),
+      has_slopes = FALSE
     ))
   }
 
   n_groups_vec <- vapply(re_multi$re_list, function(x) x$n_groups, integer(1))
+  n_coefs_vec <- vapply(re_multi$re_list, function(x) x$n_coefs, integer(1))
   idx_list <- lapply(re_multi$re_list, function(x) x$idx)
+  Z_list <- lapply(re_multi$re_list, function(x) {
+    if (is.null(x$Z)) {
+      # For intercept-only, create a matrix of 1s (will be ignored but needed)
+      NULL
+    } else {
+      x$Z
+    }
+  })
+  correlated_vec <- vapply(re_multi$re_list, function(x) x$correlated, logical(1))
 
   list(
     n_terms = as.integer(n_terms),
     n_groups_vec = as.integer(n_groups_vec),
-    idx_list = idx_list
+    n_coefs_vec = as.integer(n_coefs_vec),
+    idx_list = idx_list,
+    Z_list = Z_list,
+    correlated_vec = correlated_vec,
+    has_slopes = re_multi$has_slopes
   )
 }
 

@@ -43,8 +43,12 @@ test_that("build_multi_re creates correct structure", {
   )
 
   re_terms <- list(
-    site = list(group = "site", type = "intercept", term_idx = 1),
-    year = list(group = "year", type = "intercept", term_idx = 2)
+    site = list(group = "site", type = "intercept", term_idx = 1,
+                has_intercept = TRUE, slope_vars = character(0),
+                correlated = TRUE, n_coefs = 1L),
+    year = list(group = "year", type = "intercept", term_idx = 2,
+                has_intercept = TRUE, slope_vars = character(0),
+                correlated = TRUE, n_coefs = 1L)
   )
 
   result <- build_multi_re(data, re_terms)

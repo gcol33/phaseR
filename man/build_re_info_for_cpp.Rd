@@ -10,7 +10,7 @@ build_re_info_for_cpp(re_multi)
 \item{re_multi}{Multi-RE structure from build_multi_re()}
 }
 \value{
-List with n_terms, n_groups_vec, idx_list
+List with n_terms, n_groups_vec, idx_list, and slope info
 }
 \description{
 Converts R multi-RE structure to format expected by C++ sampler

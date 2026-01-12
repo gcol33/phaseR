@@ -127,6 +127,9 @@ prepare_stan_data <- function(model, data) {
   has_dyn_re_1 <- dyn_re_1$n_re_terms > 0
   has_re <- has_trans_re || has_dyn_re_0 || has_dyn_re_1
 
+  # Check for random slopes
+  has_slopes <- trans_re$has_slopes || dyn_re_0$has_slopes || dyn_re_1$has_slopes
+
   # Backward compatibility: single RE term info
   n_trans_re <- if (has_trans_re) trans_re$re_list[[1]]$n_groups else 0L
   n_dyn_re_0 <- if (has_dyn_re_0) dyn_re_0$re_list[[1]]$n_groups else 0L
@@ -156,24 +159,21 @@ prepare_stan_data <- function(model, data) {
     for (re_name in names(trans_re$re_list)) {
       re_info <- trans_re$re_list[[re_name]]
       param_names <- c(param_names,
-                       paste0("u_trans_", re_name, "_", re_info$levels),
-                       paste0("log_sigma_trans_re_", re_name))
+                       build_re_param_names("trans", re_name, re_info))
     }
   }
   if (has_dyn_re_0) {
     for (re_name in names(dyn_re_0$re_list)) {
       re_info <- dyn_re_0$re_list[[re_name]]
       param_names <- c(param_names,
-                       paste0("v_", model$phases$names[1], "_", re_name, "_", re_info$levels),
-                       paste0("log_sigma_", model$phases$names[1], "_re_", re_name))
+                       build_re_param_names(model$phases$names[1], re_name, re_info))
     }
   }
   if (has_dyn_re_1) {
     for (re_name in names(dyn_re_1$re_list)) {
       re_info <- dyn_re_1$re_list[[re_name]]
       param_names <- c(param_names,
-                       paste0("v_", model$phases$names[2], "_", re_name, "_", re_info$levels),
-                       paste0("log_sigma_", model$phases$names[2], "_re_", re_name))
+                       build_re_param_names(model$phases$names[2], re_name, re_info))
     }
   }
 
@@ -227,8 +227,87 @@ prepare_stan_data <- function(model, data) {
     # Multi-RE structures (v1.0.1+)
     trans_re_multi = trans_re,
     dyn_re_multi_0 = dyn_re_0,
-    dyn_re_multi_1 = dyn_re_1
+    dyn_re_multi_1 = dyn_re_1,
+    # Random slopes flag (v1.0.2+)
+    has_slopes = has_slopes
   )
+}
+
+
+#' Build RE parameter names
+#'
+#' Generates parameter names for RE terms including slopes
+#'
+#' @param component Component name (e.g., "trans", "baseline")
+#' @param re_name Name of grouping variable
+#' @param re_info RE info structure from build_multi_re
+#' @return Character vector of parameter names
+#' @keywords internal
+#'
+build_re_param_names <- function(component, re_name, re_info) {
+
+  names <- character(0)
+  n_groups <- re_info$n_groups
+  n_coefs <- re_info$n_coefs
+  levels <- re_info$levels
+
+  # Build coefficient names
+  coef_names <- character(0)
+  if (re_info$has_intercept) {
+    coef_names <- c(coef_names, "intercept")
+  }
+  if (length(re_info$slope_vars) > 0) {
+    coef_names <- c(coef_names, re_info$slope_vars)
+  }
+
+  # RE values: one per group per coefficient
+  if (component == "trans") {
+    prefix <- paste0("u_trans_", re_name)
+  } else {
+    prefix <- paste0("v_", component, "_", re_name)
+  }
+
+  if (n_coefs == 1) {
+    # Simple intercept-only: just u_trans_site_a, u_trans_site_b, ...
+    names <- c(names, paste0(prefix, "_", levels))
+  } else {
+    # Multiple coefficients: u_trans_site_a_intercept, u_trans_site_a_x, ...
+    for (lvl in levels) {
+      names <- c(names, paste0(prefix, "_", lvl, "_", coef_names))
+    }
+  }
+
+  # Variance parameters
+  if (n_coefs == 1) {
+    # Single variance
+    if (component == "trans") {
+      names <- c(names, paste0("log_sigma_trans_re_", re_name))
+    } else {
+      names <- c(names, paste0("log_sigma_", component, "_re_", re_name))
+    }
+  } else if (re_info$correlated) {
+    # Cholesky lower triangle: L11, L21, L22, L31, L32, L33, ...
+    for (i in seq_len(n_coefs)) {
+      for (j in seq_len(i)) {
+        if (component == "trans") {
+          names <- c(names, paste0("L_trans_re_", re_name, "_", i, "_", j))
+        } else {
+          names <- c(names, paste0("L_", component, "_re_", re_name, "_", i, "_", j))
+        }
+      }
+    }
+  } else {
+    # Diagonal variances
+    for (k in seq_along(coef_names)) {
+      if (component == "trans") {
+        names <- c(names, paste0("log_sigma_trans_re_", re_name, "_", coef_names[k]))
+      } else {
+        names <- c(names, paste0("log_sigma_", component, "_re_", re_name, "_", coef_names[k]))
+      }
+    }
+  }
+
+  names
 }
 
 

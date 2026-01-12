@@ -1,3 +1,23 @@
+# phaseR 1.0.4
+
+## New Features
+
+* **Laplace approximation backend**: Fast approximate inference for large datasets
+  - `backend = "laplace"` option in `fit_phaseR()`
+  - Finds posterior mode via L-BFGS-B optimization
+  - Standard errors from inverse Hessian
+  - Samples drawn from Gaussian approximation
+  - Works with all model types: basic, RE, crossed RE, slopes, nested RE
+
+## Internal Changes
+
+* New `R/backend_laplace.R` with full implementation
+* `build_neg_log_posterior()` dispatches to correct C++ likelihood
+* `sample_mvnorm()` for drawing from multivariate normal
+* `MASS_ginv()` for pseudo-inverse without MASS dependency
+
+---
+
 # phaseR 1.0.3
 
 ## New Features

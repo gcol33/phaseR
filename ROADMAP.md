@@ -29,7 +29,7 @@ phaseR provides phase-structured inference for longitudinal data with:
 | Feature | ratiod | phaseR | Version |
 |---------|--------|--------|---------|
 | HMC/NUTS | ✓ | ✓ | v1.0.0 |
-| Laplace approximation | ✓ | ✗ | v1.0.4 |
+| Laplace approximation | ✓ | ✓ | v1.0.4 |
 
 ### Priors & Model Comparison
 
@@ -162,7 +162,7 @@ phaseR provides phase-structured inference for longitudinal data with:
 | v1.0.1 | Multiple crossed RE | Done |
 | v1.0.2 | Random slopes | Done |
 | v1.0.3 | Nested RE | Done |
-| v1.0.4 | Laplace backend | High |
+| v1.0.4 | Laplace backend | Done |
 | v1.0.5 | Custom priors | Medium |
 | v1.0.6 | LOO-CV | Medium |
 | **v1.1.0** | **Feature parity with ratiod** | - |

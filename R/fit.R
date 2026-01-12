@@ -117,54 +117,30 @@ prepare_stan_data <- function(model, data) {
   n_dyn_coef_0 <- ncol(X_dyn_0)
   n_dyn_coef_1 <- ncol(X_dyn_1)
 
-  # Check for random effects
-  has_trans_re <- trans_parsed$has_re
-  has_dyn_re_0 <- dyn_parsed_0$has_re
-  has_dyn_re_1 <- dyn_parsed_1$has_re
+  # Build multi-RE structures for each component
+  trans_re <- build_multi_re(data, trans_parsed$re_terms)
+  dyn_re_0 <- build_multi_re(data, dyn_parsed_0$re_terms)
+  dyn_re_1 <- build_multi_re(data, dyn_parsed_1$re_terms)
+
+  has_trans_re <- trans_re$n_re_terms > 0
+  has_dyn_re_0 <- dyn_re_0$n_re_terms > 0
+  has_dyn_re_1 <- dyn_re_1$n_re_terms > 0
   has_re <- has_trans_re || has_dyn_re_0 || has_dyn_re_1
 
-  # Initialize RE structures
-  n_trans_re <- 0L
-  n_dyn_re_0 <- 0L
-  n_dyn_re_1 <- 0L
-  trans_re_idx <- integer(0)
-  dyn_re_idx_0 <- integer(0)
-  dyn_re_idx_1 <- integer(0)
-  trans_re_levels <- character(0)
-  dyn_re_levels_0 <- character(0)
-  dyn_re_levels_1 <- character(0)
+  # Backward compatibility: single RE term info
+  n_trans_re <- if (has_trans_re) trans_re$re_list[[1]]$n_groups else 0L
+  n_dyn_re_0 <- if (has_dyn_re_0) dyn_re_0$re_list[[1]]$n_groups else 0L
+  n_dyn_re_1 <- if (has_dyn_re_1) dyn_re_1$re_list[[1]]$n_groups else 0L
+  trans_re_idx <- if (has_trans_re) trans_re$re_list[[1]]$idx else integer(0)
+  dyn_re_idx_0 <- if (has_dyn_re_0) dyn_re_0$re_list[[1]]$idx else integer(0)
+  dyn_re_idx_1 <- if (has_dyn_re_1) dyn_re_1$re_list[[1]]$idx else integer(0)
+  trans_re_levels <- if (has_trans_re) trans_re$re_list[[1]]$levels else character(0)
+  dyn_re_levels_0 <- if (has_dyn_re_0) dyn_re_0$re_list[[1]]$levels else character(0)
+  dyn_re_levels_1 <- if (has_dyn_re_1) dyn_re_1$re_list[[1]]$levels else character(0)
 
-  if (has_trans_re) {
-    group_var <- trans_parsed$re_groups[1]
-    re_info <- build_re_index(data, group_var)
-    trans_re_idx <- re_info$idx
-    n_trans_re <- re_info$n_groups
-    trans_re_levels <- re_info$levels
-  }
-
-  if (has_dyn_re_0) {
-    group_var <- dyn_parsed_0$re_groups[1]
-    re_info <- build_re_index(data, group_var)
-    dyn_re_idx_0 <- re_info$idx
-    n_dyn_re_0 <- re_info$n_groups
-    dyn_re_levels_0 <- re_info$levels
-  }
-
-  if (has_dyn_re_1) {
-    group_var <- dyn_parsed_1$re_groups[1]
-    re_info <- build_re_index(data, group_var)
-    dyn_re_idx_1 <- re_info$idx
-    n_dyn_re_1 <- re_info$n_groups
-    dyn_re_levels_1 <- re_info$levels
-  }
-
-  # Total parameters
-  # Fixed: trans + dyn_0 + dyn_1 + 2 sigmas
-  # RE: u_trans(n_trans_re) + log_sigma_trans_re + v_0(n_dyn_re_0) + log_sigma_dyn_re_0 + ...
+  # Total parameters (fixed + RE)
   n_params <- n_trans_coef + n_dyn_coef_0 + n_dyn_coef_1 + 2
-  if (has_trans_re) n_params <- n_params + n_trans_re + 1
-  if (has_dyn_re_0) n_params <- n_params + n_dyn_re_0 + 1
-  if (has_dyn_re_1) n_params <- n_params + n_dyn_re_1 + 1
+  n_params <- n_params + trans_re$total_re_params + dyn_re_0$total_re_params + dyn_re_1$total_re_params
 
   # Parameter names
   param_names <- c(
@@ -175,20 +151,30 @@ prepare_stan_data <- function(model, data) {
     paste0("log_sigma_", model$phases$names[2])
   )
 
+  # Add RE parameter names for each term
   if (has_trans_re) {
-    param_names <- c(param_names,
-                     paste0("u_trans_", trans_re_levels),
-                     "log_sigma_trans_re")
+    for (re_name in names(trans_re$re_list)) {
+      re_info <- trans_re$re_list[[re_name]]
+      param_names <- c(param_names,
+                       paste0("u_trans_", re_name, "_", re_info$levels),
+                       paste0("log_sigma_trans_re_", re_name))
+    }
   }
   if (has_dyn_re_0) {
-    param_names <- c(param_names,
-                     paste0("v_dyn_", model$phases$names[1], "_", dyn_re_levels_0),
-                     paste0("log_sigma_dyn_re_", model$phases$names[1]))
+    for (re_name in names(dyn_re_0$re_list)) {
+      re_info <- dyn_re_0$re_list[[re_name]]
+      param_names <- c(param_names,
+                       paste0("v_", model$phases$names[1], "_", re_name, "_", re_info$levels),
+                       paste0("log_sigma_", model$phases$names[1], "_re_", re_name))
+    }
   }
   if (has_dyn_re_1) {
-    param_names <- c(param_names,
-                     paste0("v_dyn_", model$phases$names[2], "_", dyn_re_levels_1),
-                     paste0("log_sigma_dyn_re_", model$phases$names[2]))
+    for (re_name in names(dyn_re_1$re_list)) {
+      re_info <- dyn_re_1$re_list[[re_name]]
+      param_names <- c(param_names,
+                       paste0("v_", model$phases$names[2], "_", re_name, "_", re_info$levels),
+                       paste0("log_sigma_", model$phases$names[2], "_re_", re_name))
+    }
   }
 
   # Extract family info
@@ -237,7 +223,11 @@ prepare_stan_data <- function(model, data) {
     dyn_re_idx_1 = dyn_re_idx_1,
     trans_re_levels = trans_re_levels,
     dyn_re_levels_0 = dyn_re_levels_0,
-    dyn_re_levels_1 = dyn_re_levels_1
+    dyn_re_levels_1 = dyn_re_levels_1,
+    # Multi-RE structures (v1.0.1+)
+    trans_re_multi = trans_re,
+    dyn_re_multi_0 = dyn_re_0,
+    dyn_re_multi_1 = dyn_re_1
   )
 }
 

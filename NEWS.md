@@ -1,3 +1,20 @@
+# phaseR 1.0.1
+
+## New Features
+
+* **Multiple crossed random effects**: Support for `(1|site) + (1|year)` syntax
+  - Multiple RE terms per model component (transition, dynamics)
+  - New C++ sampler for multi-RE models
+  - Automatic dispatch between single-RE and multi-RE backends
+
+## Internal Changes
+
+* Extended formula parser for multiple RE terms
+* New `build_multi_re()` function for RE structure construction
+* Added `phase_likelihood_multi_re.cpp` and `hmc_sampler_multi_re.cpp`
+
+---
+
 # phaseR 1.0.0
 
 First stable release.

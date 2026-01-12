@@ -140,8 +140,23 @@ ranef <- function(object, component = c("all", "transition", "dynamics"),
 #' Extract RE draws from fitted model
 #' @keywords internal
 extract_re_draws <- function(fit, type) {
-  pattern <- sprintf("^u_%s_|^v_%s_", type, type)
+  # Handle both old naming (u_trans_level) and new naming (u_trans_groupvar_level)
+  # Exclude log_sigma parameters
+  if (grepl("^trans", type)) {
+    pattern <- "^u_trans_[^l]"  # Match u_trans_ but not log_sigma
+  } else if (grepl("^dyn_", type)) {
+    # Extract phase name
+    phase_name <- sub("^dyn_", "", type)
+    pattern <- sprintf("^v_%s_[^l]", phase_name)
+  } else {
+    pattern <- sprintf("^u_%s_|^v_%s_", type, type)
+  }
+
   idx <- grep(pattern, fit$param_names)
+  # Also exclude log_sigma parameters
+  sigma_idx <- grep("^log_sigma", fit$param_names)
+  idx <- setdiff(idx, sigma_idx)
+
   if (length(idx) == 0) return(NULL)
   fit$draws[, idx, drop = FALSE]
 }

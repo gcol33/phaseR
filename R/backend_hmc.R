@@ -97,34 +97,64 @@ run_nuts_chain <- function(stan_data, init, iter, warmup, ...) {
       n_trials_1 = stan_data$n_trials_1
     )
   } else if (isTRUE(stan_data$has_re)) {
-    # 2-phase Gaussian with random effects
-    result <- phaseR_nuts_sampler_re(
-      data = list(
-        id = stan_data$id,
-        time = stan_data$time,
-        y = stan_data$y,
-        X_trans = stan_data$X_trans,
-        X_dyn = stan_data$X_dyn,
-        n_units = stan_data$n_units,
-        unit_start = stan_data$unit_start,
-        unit_end = stan_data$unit_end,
-        trans_re_idx = stan_data$trans_re_idx,
-        dyn_re_idx_0 = stan_data$dyn_re_idx_0,
-        dyn_re_idx_1 = stan_data$dyn_re_idx_1
-      ),
-      init = init,
-      n_iter = as.integer(iter),
-      n_warmup = as.integer(warmup),
-      n_trans_coef = stan_data$n_trans_coef,
-      n_dyn_coef_0 = stan_data$n_dyn_coef_0,
-      n_dyn_coef_1 = stan_data$n_dyn_coef_1,
-      n_trans_re = stan_data$n_trans_re,
-      n_dyn_re_0 = stan_data$n_dyn_re_0,
-      n_dyn_re_1 = stan_data$n_dyn_re_1,
-      has_trans_re = stan_data$has_trans_re,
-      has_dyn_re_0 = stan_data$has_dyn_re_0,
-      has_dyn_re_1 = stan_data$has_dyn_re_1
-    )
+    # Check for multi-RE (more than one RE term in any component)
+    has_multi_re <- (stan_data$trans_re_multi$n_re_terms > 1) ||
+                    (stan_data$dyn_re_multi_0$n_re_terms > 1) ||
+                    (stan_data$dyn_re_multi_1$n_re_terms > 1)
+
+    if (has_multi_re) {
+      # Multi-RE sampler
+      result <- phaseR_nuts_sampler_multi_re(
+        data = list(
+          id = stan_data$id,
+          time = stan_data$time,
+          y = stan_data$y,
+          X_trans = stan_data$X_trans,
+          X_dyn = stan_data$X_dyn,
+          n_units = stan_data$n_units,
+          unit_start = stan_data$unit_start,
+          unit_end = stan_data$unit_end
+        ),
+        init = init,
+        n_iter = as.integer(iter),
+        n_warmup = as.integer(warmup),
+        n_trans_coef = stan_data$n_trans_coef,
+        n_dyn_coef_0 = stan_data$n_dyn_coef_0,
+        n_dyn_coef_1 = stan_data$n_dyn_coef_1,
+        trans_re_info = build_re_info_for_cpp(stan_data$trans_re_multi),
+        dyn_re_info_0 = build_re_info_for_cpp(stan_data$dyn_re_multi_0),
+        dyn_re_info_1 = build_re_info_for_cpp(stan_data$dyn_re_multi_1)
+      )
+    } else {
+      # Single-RE sampler (backward compatible)
+      result <- phaseR_nuts_sampler_re(
+        data = list(
+          id = stan_data$id,
+          time = stan_data$time,
+          y = stan_data$y,
+          X_trans = stan_data$X_trans,
+          X_dyn = stan_data$X_dyn,
+          n_units = stan_data$n_units,
+          unit_start = stan_data$unit_start,
+          unit_end = stan_data$unit_end,
+          trans_re_idx = stan_data$trans_re_idx,
+          dyn_re_idx_0 = stan_data$dyn_re_idx_0,
+          dyn_re_idx_1 = stan_data$dyn_re_idx_1
+        ),
+        init = init,
+        n_iter = as.integer(iter),
+        n_warmup = as.integer(warmup),
+        n_trans_coef = stan_data$n_trans_coef,
+        n_dyn_coef_0 = stan_data$n_dyn_coef_0,
+        n_dyn_coef_1 = stan_data$n_dyn_coef_1,
+        n_trans_re = stan_data$n_trans_re,
+        n_dyn_re_0 = stan_data$n_dyn_re_0,
+        n_dyn_re_1 = stan_data$n_dyn_re_1,
+        has_trans_re = stan_data$has_trans_re,
+        has_dyn_re_0 = stan_data$has_dyn_re_0,
+        has_dyn_re_1 = stan_data$has_dyn_re_1
+      )
+    }
   } else {
     # 2-phase Gaussian without random effects
     result <- phaseR_nuts_sampler(
@@ -154,6 +184,35 @@ run_nuts_chain <- function(stan_data, init, iter, warmup, ...) {
       accept_prob = result$accept_prob,
       step_size = result$step_size
     )
+  )
+}
+
+
+#' Build RE info structure for C++
+#'
+#' Converts R multi-RE structure to format expected by C++ sampler
+#'
+#' @param re_multi Multi-RE structure from build_multi_re()
+#' @return List with n_terms, n_groups_vec, idx_list
+#' @keywords internal
+build_re_info_for_cpp <- function(re_multi) {
+  n_terms <- re_multi$n_re_terms
+
+  if (n_terms == 0) {
+    return(list(
+      n_terms = 0L,
+      n_groups_vec = integer(0),
+      idx_list = list()
+    ))
+  }
+
+  n_groups_vec <- vapply(re_multi$re_list, function(x) x$n_groups, integer(1))
+  idx_list <- lapply(re_multi$re_list, function(x) x$idx)
+
+  list(
+    n_terms = as.integer(n_terms),
+    n_groups_vec = as.integer(n_groups_vec),
+    idx_list = idx_list
   )
 }
 

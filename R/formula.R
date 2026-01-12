@@ -1,11 +1,21 @@
 #' Parse formula for random effects
 #'
+#' Parses formulas with one or more random intercept terms.
+#' Supports: `y ~ x + (1|site) + (1|year)`
+#'
 #' @param formula A formula potentially containing `(1 | group)` terms
 #'
-#' @return A list with fixed formula, RE terms, and group names
+#' @return A list with:
+#'   - `fixed_formula`: Formula without RE terms
+#'   - `has_re`: Logical, TRUE if any RE terms found
+#'   - `re_terms`: List of RE specifications (one per term)
+#'   - `n_re_terms`: Number of RE terms
+#'   - `re_groups`: Character vector of group names (for backward compat)
+#'
 #' @keywords internal
 #'
 parse_formula_re <- function(formula) {
+
 
   formula_str <- deparse(formula, width.cutoff = 500)
 
@@ -18,13 +28,25 @@ parse_formula_re <- function(formula) {
     return(list(
       fixed_formula = formula,
       has_re = FALSE,
+      re_terms = list(),
+      n_re_terms = 0L,
       re_groups = character(0)
     ))
   }
 
   # Extract group names
-  re_terms <- regmatches(formula_str, re_matches)[[1]]
-  group_names <- gsub(re_pattern, "\\1", re_terms, perl = TRUE)
+  re_terms_str <- regmatches(formula_str, re_matches)[[1]]
+  group_names <- gsub(re_pattern, "\\1", re_terms_str, perl = TRUE)
+
+  # Build structured RE term list
+  re_terms <- lapply(seq_along(group_names), function(i) {
+    list(
+      group = group_names[i],
+      type = "intercept",
+      term_idx = i
+    )
+  })
+  names(re_terms) <- group_names
 
   # Remove RE terms from formula to get fixed-effects formula
   fixed_str <- gsub("\\+?\\s*\\(\\s*1\\s*\\|\\s*[^)]+\\)", "", formula_str)
@@ -47,6 +69,8 @@ parse_formula_re <- function(formula) {
   list(
     fixed_formula = as.formula(fixed_str),
     has_re = TRUE,
+    re_terms = re_terms,
+    n_re_terms = length(re_terms),
     re_groups = unique(group_names)
   )
 }
@@ -76,5 +100,46 @@ build_re_index <- function(data, group_var) {
     idx = group_idx,
     n_groups = n_groups,
     levels = group_levels
+  )
+}
+
+
+#' Build multiple random effect structures
+#'
+#' @param data Data frame
+#' @param re_terms List of RE term specifications from parse_formula_re()
+#'
+#' @return List with:
+#'   - `n_re_terms`: Number of RE terms
+#'   - `re_list`: List of RE structures (one per term)
+#'   - `total_re_params`: Total number of RE parameters
+#'
+#' @keywords internal
+#'
+build_multi_re <- function(data, re_terms) {
+
+ if (length(re_terms) == 0) {
+    return(list(
+      n_re_terms = 0L,
+      re_list = list(),
+      total_re_params = 0L
+    ))
+  }
+
+  re_list <- lapply(re_terms, function(term) {
+    re_info <- build_re_index(data, term$group)
+    re_info$group_var <- term$group
+    re_info$type <- term$type
+    re_info
+  })
+  names(re_list) <- names(re_terms)
+
+  # Total RE params: sum of n_groups + one sigma per term
+  total_re_params <- sum(vapply(re_list, function(x) x$n_groups + 1L, integer(1)))
+
+  list(
+    n_re_terms = length(re_list),
+    re_list = re_list,
+    total_re_params = total_re_params
   )
 }

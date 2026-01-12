@@ -10,9 +10,17 @@ parse_formula_re(formula)
 \item{formula}{A formula potentially containing \code{(1 | group)} terms}
 }
 \value{
-A list with fixed formula, RE terms, and group names
+A list with:
+\itemize{
+\item \code{fixed_formula}: Formula without RE terms
+\item \code{has_re}: Logical, TRUE if any RE terms found
+\item \code{re_terms}: List of RE specifications (one per term)
+\item \code{n_re_terms}: Number of RE terms
+\item \code{re_groups}: Character vector of group names (for backward compat)
+}
 }
 \description{
-Parse formula for random effects
+Parses formulas with one or more random intercept terms.
+Supports: \code{y ~ x + (1|site) + (1|year)}
 }
 \keyword{internal}

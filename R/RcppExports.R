@@ -17,6 +17,10 @@ phaseR_nuts_sampler_k <- function(data, init, n_iter, n_warmup, n_dyn_coef, n_tr
     .Call(`_phaseR_phaseR_nuts_sampler_k`, data, init, n_iter, n_warmup, n_dyn_coef, n_trans_coef, k_phases, target_accept, max_treedepth)
 }
 
+phaseR_nuts_sampler_multi_re <- function(data, init, n_iter, n_warmup, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, trans_re_info, dyn_re_info_0, dyn_re_info_1, target_accept = 0.8, max_treedepth = 10L) {
+    .Call(`_phaseR_phaseR_nuts_sampler_multi_re`, data, init, n_iter, n_warmup, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, trans_re_info, dyn_re_info_0, dyn_re_info_1, target_accept, max_treedepth)
+}
+
 phase_log_likelihood <- function(params, data, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1) {
     .Call(`_phaseR_phase_log_likelihood`, params, data, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1)
 }
@@ -63,5 +67,17 @@ phase_log_prior_k <- function(params, n_dyn_coef, n_trans_coef, k_phases) {
 
 phase_log_posterior_k <- function(params, data, n_dyn_coef, n_trans_coef, k_phases) {
     .Call(`_phaseR_phase_log_posterior_k`, params, data, n_dyn_coef, n_trans_coef, k_phases)
+}
+
+phase_log_likelihood_multi_re <- function(params, data, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, trans_re_info, dyn_re_info_0, dyn_re_info_1) {
+    .Call(`_phaseR_phase_log_likelihood_multi_re`, params, data, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, trans_re_info, dyn_re_info_0, dyn_re_info_1)
+}
+
+phase_log_prior_multi_re <- function(params, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, trans_re_info, dyn_re_info_0, dyn_re_info_1) {
+    .Call(`_phaseR_phase_log_prior_multi_re`, params, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, trans_re_info, dyn_re_info_0, dyn_re_info_1)
+}
+
+phase_log_posterior_multi_re <- function(params, data, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, trans_re_info, dyn_re_info_0, dyn_re_info_1) {
+    .Call(`_phaseR_phase_log_posterior_multi_re`, params, data, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, trans_re_info, dyn_re_info_0, dyn_re_info_1)
 }
 

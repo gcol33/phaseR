@@ -1,3 +1,22 @@
+# phaseR 1.0.6
+
+## New Features
+
+* **LOO-CV via PSIS**: Leave-one-out cross-validation using Pareto-smoothed importance sampling
+  - `loo()` function for computing PSIS-LOO estimates
+  - `loo_compare()` for comparing multiple models
+  - Diagnostic k-hat values indicate estimate reliability
+  - Builds on existing `compute_pointwise_ll()` infrastructure
+
+## Internal Changes
+
+* New `R/loo.R` with full PSIS-LOO implementation
+* `psis_loo()` core algorithm for importance sampling
+* `psis_smooth()` applies Pareto smoothing to importance weights
+* `estimate_pareto_k()` and `smooth_pareto_tail()` helper functions
+
+---
+
 # phaseR 1.0.5
 
 ## New Features

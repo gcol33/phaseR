@@ -39,17 +39,16 @@ fit_phaseR <- function(model,
 
   backend <- match.arg(backend)
 
-  # Check prior specification
-
-  if (!is.null(prior) && !is_default_prior(prior)) {
-    message("Note: Custom priors specified but not yet fully supported. Using defaults.")
+  # Set up priors (use defaults if not specified)
+  if (is.null(prior)) {
+    prior <- prior()
   }
 
   # Validate
   validate_model_data(model, data)
 
   # Prepare data for C++
-  stan_data <- prepare_stan_data(model, data)
+  stan_data <- prepare_stan_data(model, data, prior)
 
   # Set seed
   if (!is.null(seed)) set.seed(seed)
@@ -68,7 +67,11 @@ fit_phaseR <- function(model,
 
 #' Prepare data for C++ likelihood
 #' @keywords internal
-prepare_stan_data <- function(model, data) {
+prepare_stan_data <- function(model, data, prior = NULL) {
+
+  # Convert prior to C++ format
+  if (is.null(prior)) prior <- prior()
+  prior_cpp <- prior_to_cpp(prior)
 
   # Sort data by id, then time
   data <- data[order(data$id, data$time), ]
@@ -239,7 +242,9 @@ prepare_stan_data <- function(model, data) {
     dyn_re_multi_0 = dyn_re_0,
     dyn_re_multi_1 = dyn_re_1,
     # Random slopes flag (v1.0.2+)
-    has_slopes = has_slopes
+    has_slopes = has_slopes,
+    # Prior specifications (v1.0.5+)
+    prior_cpp = prior_cpp
   )
 }
 

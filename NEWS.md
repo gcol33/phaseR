@@ -1,3 +1,22 @@
+# phaseR 1.0.5
+
+## New Features
+
+* **Custom prior specification**: User-specified priors on all parameters
+  - Formula syntax: `prior(beta ~ normal(0, 2.5), sigma ~ half_cauchy(1))`
+  - Distribution functions: `normal()`, `student_t()`, `cauchy()`, `half_normal()`, `half_cauchy()`, `lkj()`
+  - Parameter classes: `beta` (coefficients), `sigma` (residual SD), `re` (RE SD), `cor` (correlations)
+  - Backward compatible with old `prior(beta_sd = 2.5)` syntax
+
+## Internal Changes
+
+* New `prior_functions.h` header with log-density functions for all distributions
+* `phase_log_posterior_custom()` and `phase_log_posterior_re_custom()` C++ functions
+* `prior_to_cpp()` converts R prior objects to C++ format
+* Extended `build_neg_log_posterior()` to use custom priors
+
+---
+
 # phaseR 1.0.4
 
 ## New Features

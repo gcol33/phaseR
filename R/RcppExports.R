@@ -37,6 +37,14 @@ phase_log_posterior <- function(params, data, n_trans_coef, n_dyn_coef_0, n_dyn_
     .Call(`_phaseR_phase_log_posterior`, params, data, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1)
 }
 
+phase_log_prior_custom <- function(params, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, beta_type, beta_params, sigma_type, sigma_params) {
+    .Call(`_phaseR_phase_log_prior_custom`, params, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, beta_type, beta_params, sigma_type, sigma_params)
+}
+
+phase_log_posterior_custom <- function(params, data, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, beta_type, beta_params, sigma_type, sigma_params) {
+    .Call(`_phaseR_phase_log_posterior_custom`, params, data, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, beta_type, beta_params, sigma_type, sigma_params)
+}
+
 phase_log_likelihood_re <- function(params, data, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, n_trans_re, n_dyn_re_0, n_dyn_re_1, has_trans_re, has_dyn_re_0, has_dyn_re_1) {
     .Call(`_phaseR_phase_log_likelihood_re`, params, data, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, n_trans_re, n_dyn_re_0, n_dyn_re_1, has_trans_re, has_dyn_re_0, has_dyn_re_1)
 }
@@ -47,6 +55,14 @@ phase_log_prior_re <- function(params, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1,
 
 phase_log_posterior_re <- function(params, data, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, n_trans_re, n_dyn_re_0, n_dyn_re_1, has_trans_re, has_dyn_re_0, has_dyn_re_1) {
     .Call(`_phaseR_phase_log_posterior_re`, params, data, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, n_trans_re, n_dyn_re_0, n_dyn_re_1, has_trans_re, has_dyn_re_0, has_dyn_re_1)
+}
+
+phase_log_prior_re_custom <- function(params, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, n_trans_re, n_dyn_re_0, n_dyn_re_1, has_trans_re, has_dyn_re_0, has_dyn_re_1, beta_type, beta_params, sigma_type, sigma_params, re_type, re_params) {
+    .Call(`_phaseR_phase_log_prior_re_custom`, params, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, n_trans_re, n_dyn_re_0, n_dyn_re_1, has_trans_re, has_dyn_re_0, has_dyn_re_1, beta_type, beta_params, sigma_type, sigma_params, re_type, re_params)
+}
+
+phase_log_posterior_re_custom <- function(params, data, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, n_trans_re, n_dyn_re_0, n_dyn_re_1, has_trans_re, has_dyn_re_0, has_dyn_re_1, beta_type, beta_params, sigma_type, sigma_params, re_type, re_params) {
+    .Call(`_phaseR_phase_log_posterior_re_custom`, params, data, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, n_trans_re, n_dyn_re_0, n_dyn_re_1, has_trans_re, has_dyn_re_0, has_dyn_re_1, beta_type, beta_params, sigma_type, sigma_params, re_type, re_params)
 }
 
 phase_log_likelihood_glm <- function(params, data, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, family_0, family_1, n_trials_0, n_trials_1) {

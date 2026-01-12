@@ -192,9 +192,10 @@ build_neg_log_posterior <- function(stan_data) {
         )
       }
     } else {
-      # Single-RE model
+      # Single-RE model with custom priors
+      prior_cpp <- stan_data$prior_cpp
       function(params) {
-        -phase_log_posterior_re(
+        -phase_log_posterior_re_custom(
           params = params,
           data = list(
             id = stan_data$id,
@@ -217,14 +218,21 @@ build_neg_log_posterior <- function(stan_data) {
           n_dyn_re_1 = stan_data$n_dyn_re_1,
           has_trans_re = stan_data$has_trans_re,
           has_dyn_re_0 = stan_data$has_dyn_re_0,
-          has_dyn_re_1 = stan_data$has_dyn_re_1
+          has_dyn_re_1 = stan_data$has_dyn_re_1,
+          beta_type = prior_cpp$beta_type,
+          beta_params = prior_cpp$beta_params,
+          sigma_type = prior_cpp$sigma_type,
+          sigma_params = prior_cpp$sigma_params,
+          re_type = prior_cpp$re_type,
+          re_params = prior_cpp$re_params
         )
       }
     }
   } else {
-    # 2-phase Gaussian without RE
+    # 2-phase Gaussian without RE - use custom priors
+    prior_cpp <- stan_data$prior_cpp
     function(params) {
-      -phase_log_posterior(
+      -phase_log_posterior_custom(
         params = params,
         data = list(
           id = stan_data$id,
@@ -238,7 +246,11 @@ build_neg_log_posterior <- function(stan_data) {
         ),
         n_trans_coef = stan_data$n_trans_coef,
         n_dyn_coef_0 = stan_data$n_dyn_coef_0,
-        n_dyn_coef_1 = stan_data$n_dyn_coef_1
+        n_dyn_coef_1 = stan_data$n_dyn_coef_1,
+        beta_type = prior_cpp$beta_type,
+        beta_params = prior_cpp$beta_params,
+        sigma_type = prior_cpp$sigma_type,
+        sigma_params = prior_cpp$sigma_params
       )
     }
   }

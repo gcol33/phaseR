@@ -4,35 +4,74 @@
 \alias{prior}
 \title{Specify priors for phase model}
 \usage{
-prior(beta_sd = 2.5, sigma_sd = 1, re_sd = 0.5)
+prior(..., beta_sd = 2.5, sigma_sd = 1, re_sd = 0.5)
 }
 \arguments{
-\item{beta_sd}{Prior SD for regression coefficients (default 2.5)}
+\item{...}{Prior specifications using formula syntax (e.g., \code{beta ~ normal(0, 2.5)})
+or named SD parameters for backward compatibility (\code{beta_sd = 2.5}).}
 
-\item{sigma_sd}{Prior SD for log(sigma) parameters (default 1)}
+\item{beta_sd}{Prior SD for regression coefficients (default 2.5, ignored if
+formula syntax is used)}
 
-\item{re_sd}{Prior SD for random effect hyperparameter (default 0.5)}
+\item{sigma_sd}{Prior SD for log(sigma) parameters (default 1, ignored if
+formula syntax is used)}
+
+\item{re_sd}{Prior SD for random effect hyperparameter (default 0.5, ignored if
+formula syntax is used)}
 }
 \value{
 A \code{phase_prior} object
 }
 \description{
-Creates a prior specification object. Currently supports Normal priors
-on all coefficients.
+Creates a prior specification object with either simple SD parameters
+or full distribution specifications using formula syntax.
 }
 \details{
 The default priors are weakly informative:
 \itemize{
 \item Regression coefficients: Normal(0, 2.5)
-\item Log residual SD: Normal(0, 1)
+\item Residual SD (sigma): Half-Normal(0, 1)
 \item Random effect SD: Half-Normal(0, 0.5)
+\item Correlation (LKJ): LKJ(2)
+}
+\subsection{Supported distributions}{
+
+\describe{
+\item{\code{normal(mean, sd)}}{Normal distribution}
+\item{\code{student_t(df, mean, scale)}}{Student-t distribution}
+\item{\code{cauchy(location, scale)}}{Cauchy distribution}
+\item{\code{half_normal(sd)}}{Half-Normal (positive values only)}
+\item{\code{half_cauchy(scale)}}{Half-Cauchy (positive values only)}
+\item{\code{lkj(eta)}}{LKJ prior for correlation matrices}
+}
+}
+
+\subsection{Parameter classes}{
+
+\describe{
+\item{\code{beta}}{All regression coefficients (fixed effects)}
+\item{\code{sigma}}{Residual standard deviations}
+\item{\code{re}}{Random effect standard deviations}
+\item{\code{cor}}{Correlation matrices (for correlated random slopes)}
+}
 }
 }
 \examples{
 # Default priors
 prior()
 
-# Tighter priors on coefficients
+# Simple SD specification (backward compatible)
 prior(beta_sd = 1)
+
+# Full distribution specification
+prior(
+  beta ~ normal(0, 2.5),
+  sigma ~ half_cauchy(1),
+  re ~ half_normal(0.5),
+  cor ~ lkj(2)
+)
+
+# Student-t for robust regression coefficients
+prior(beta ~ student_t(3, 0, 2.5))
 
 }

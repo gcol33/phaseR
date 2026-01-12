@@ -182,6 +182,43 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// phase_log_prior_custom
+double phase_log_prior_custom(NumericVector params, int n_trans_coef, int n_dyn_coef_0, int n_dyn_coef_1, int beta_type, NumericVector beta_params, int sigma_type, NumericVector sigma_params);
+RcppExport SEXP _phaseR_phase_log_prior_custom(SEXP paramsSEXP, SEXP n_trans_coefSEXP, SEXP n_dyn_coef_0SEXP, SEXP n_dyn_coef_1SEXP, SEXP beta_typeSEXP, SEXP beta_paramsSEXP, SEXP sigma_typeSEXP, SEXP sigma_paramsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type params(paramsSEXP);
+    Rcpp::traits::input_parameter< int >::type n_trans_coef(n_trans_coefSEXP);
+    Rcpp::traits::input_parameter< int >::type n_dyn_coef_0(n_dyn_coef_0SEXP);
+    Rcpp::traits::input_parameter< int >::type n_dyn_coef_1(n_dyn_coef_1SEXP);
+    Rcpp::traits::input_parameter< int >::type beta_type(beta_typeSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type beta_params(beta_paramsSEXP);
+    Rcpp::traits::input_parameter< int >::type sigma_type(sigma_typeSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type sigma_params(sigma_paramsSEXP);
+    rcpp_result_gen = Rcpp::wrap(phase_log_prior_custom(params, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, beta_type, beta_params, sigma_type, sigma_params));
+    return rcpp_result_gen;
+END_RCPP
+}
+// phase_log_posterior_custom
+double phase_log_posterior_custom(NumericVector params, List data, int n_trans_coef, int n_dyn_coef_0, int n_dyn_coef_1, int beta_type, NumericVector beta_params, int sigma_type, NumericVector sigma_params);
+RcppExport SEXP _phaseR_phase_log_posterior_custom(SEXP paramsSEXP, SEXP dataSEXP, SEXP n_trans_coefSEXP, SEXP n_dyn_coef_0SEXP, SEXP n_dyn_coef_1SEXP, SEXP beta_typeSEXP, SEXP beta_paramsSEXP, SEXP sigma_typeSEXP, SEXP sigma_paramsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type params(paramsSEXP);
+    Rcpp::traits::input_parameter< List >::type data(dataSEXP);
+    Rcpp::traits::input_parameter< int >::type n_trans_coef(n_trans_coefSEXP);
+    Rcpp::traits::input_parameter< int >::type n_dyn_coef_0(n_dyn_coef_0SEXP);
+    Rcpp::traits::input_parameter< int >::type n_dyn_coef_1(n_dyn_coef_1SEXP);
+    Rcpp::traits::input_parameter< int >::type beta_type(beta_typeSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type beta_params(beta_paramsSEXP);
+    Rcpp::traits::input_parameter< int >::type sigma_type(sigma_typeSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type sigma_params(sigma_paramsSEXP);
+    rcpp_result_gen = Rcpp::wrap(phase_log_posterior_custom(params, data, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, beta_type, beta_params, sigma_type, sigma_params));
+    return rcpp_result_gen;
+END_RCPP
+}
 // phase_log_likelihood_re
 double phase_log_likelihood_re(NumericVector params, List data, int n_trans_coef, int n_dyn_coef_0, int n_dyn_coef_1, int n_trans_re, int n_dyn_re_0, int n_dyn_re_1, bool has_trans_re, bool has_dyn_re_0, bool has_dyn_re_1);
 RcppExport SEXP _phaseR_phase_log_likelihood_re(SEXP paramsSEXP, SEXP dataSEXP, SEXP n_trans_coefSEXP, SEXP n_dyn_coef_0SEXP, SEXP n_dyn_coef_1SEXP, SEXP n_trans_reSEXP, SEXP n_dyn_re_0SEXP, SEXP n_dyn_re_1SEXP, SEXP has_trans_reSEXP, SEXP has_dyn_re_0SEXP, SEXP has_dyn_re_1SEXP) {
@@ -241,6 +278,59 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< bool >::type has_dyn_re_0(has_dyn_re_0SEXP);
     Rcpp::traits::input_parameter< bool >::type has_dyn_re_1(has_dyn_re_1SEXP);
     rcpp_result_gen = Rcpp::wrap(phase_log_posterior_re(params, data, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, n_trans_re, n_dyn_re_0, n_dyn_re_1, has_trans_re, has_dyn_re_0, has_dyn_re_1));
+    return rcpp_result_gen;
+END_RCPP
+}
+// phase_log_prior_re_custom
+double phase_log_prior_re_custom(NumericVector params, int n_trans_coef, int n_dyn_coef_0, int n_dyn_coef_1, int n_trans_re, int n_dyn_re_0, int n_dyn_re_1, bool has_trans_re, bool has_dyn_re_0, bool has_dyn_re_1, int beta_type, NumericVector beta_params, int sigma_type, NumericVector sigma_params, int re_type, NumericVector re_params);
+RcppExport SEXP _phaseR_phase_log_prior_re_custom(SEXP paramsSEXP, SEXP n_trans_coefSEXP, SEXP n_dyn_coef_0SEXP, SEXP n_dyn_coef_1SEXP, SEXP n_trans_reSEXP, SEXP n_dyn_re_0SEXP, SEXP n_dyn_re_1SEXP, SEXP has_trans_reSEXP, SEXP has_dyn_re_0SEXP, SEXP has_dyn_re_1SEXP, SEXP beta_typeSEXP, SEXP beta_paramsSEXP, SEXP sigma_typeSEXP, SEXP sigma_paramsSEXP, SEXP re_typeSEXP, SEXP re_paramsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type params(paramsSEXP);
+    Rcpp::traits::input_parameter< int >::type n_trans_coef(n_trans_coefSEXP);
+    Rcpp::traits::input_parameter< int >::type n_dyn_coef_0(n_dyn_coef_0SEXP);
+    Rcpp::traits::input_parameter< int >::type n_dyn_coef_1(n_dyn_coef_1SEXP);
+    Rcpp::traits::input_parameter< int >::type n_trans_re(n_trans_reSEXP);
+    Rcpp::traits::input_parameter< int >::type n_dyn_re_0(n_dyn_re_0SEXP);
+    Rcpp::traits::input_parameter< int >::type n_dyn_re_1(n_dyn_re_1SEXP);
+    Rcpp::traits::input_parameter< bool >::type has_trans_re(has_trans_reSEXP);
+    Rcpp::traits::input_parameter< bool >::type has_dyn_re_0(has_dyn_re_0SEXP);
+    Rcpp::traits::input_parameter< bool >::type has_dyn_re_1(has_dyn_re_1SEXP);
+    Rcpp::traits::input_parameter< int >::type beta_type(beta_typeSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type beta_params(beta_paramsSEXP);
+    Rcpp::traits::input_parameter< int >::type sigma_type(sigma_typeSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type sigma_params(sigma_paramsSEXP);
+    Rcpp::traits::input_parameter< int >::type re_type(re_typeSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type re_params(re_paramsSEXP);
+    rcpp_result_gen = Rcpp::wrap(phase_log_prior_re_custom(params, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, n_trans_re, n_dyn_re_0, n_dyn_re_1, has_trans_re, has_dyn_re_0, has_dyn_re_1, beta_type, beta_params, sigma_type, sigma_params, re_type, re_params));
+    return rcpp_result_gen;
+END_RCPP
+}
+// phase_log_posterior_re_custom
+double phase_log_posterior_re_custom(NumericVector params, List data, int n_trans_coef, int n_dyn_coef_0, int n_dyn_coef_1, int n_trans_re, int n_dyn_re_0, int n_dyn_re_1, bool has_trans_re, bool has_dyn_re_0, bool has_dyn_re_1, int beta_type, NumericVector beta_params, int sigma_type, NumericVector sigma_params, int re_type, NumericVector re_params);
+RcppExport SEXP _phaseR_phase_log_posterior_re_custom(SEXP paramsSEXP, SEXP dataSEXP, SEXP n_trans_coefSEXP, SEXP n_dyn_coef_0SEXP, SEXP n_dyn_coef_1SEXP, SEXP n_trans_reSEXP, SEXP n_dyn_re_0SEXP, SEXP n_dyn_re_1SEXP, SEXP has_trans_reSEXP, SEXP has_dyn_re_0SEXP, SEXP has_dyn_re_1SEXP, SEXP beta_typeSEXP, SEXP beta_paramsSEXP, SEXP sigma_typeSEXP, SEXP sigma_paramsSEXP, SEXP re_typeSEXP, SEXP re_paramsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type params(paramsSEXP);
+    Rcpp::traits::input_parameter< List >::type data(dataSEXP);
+    Rcpp::traits::input_parameter< int >::type n_trans_coef(n_trans_coefSEXP);
+    Rcpp::traits::input_parameter< int >::type n_dyn_coef_0(n_dyn_coef_0SEXP);
+    Rcpp::traits::input_parameter< int >::type n_dyn_coef_1(n_dyn_coef_1SEXP);
+    Rcpp::traits::input_parameter< int >::type n_trans_re(n_trans_reSEXP);
+    Rcpp::traits::input_parameter< int >::type n_dyn_re_0(n_dyn_re_0SEXP);
+    Rcpp::traits::input_parameter< int >::type n_dyn_re_1(n_dyn_re_1SEXP);
+    Rcpp::traits::input_parameter< bool >::type has_trans_re(has_trans_reSEXP);
+    Rcpp::traits::input_parameter< bool >::type has_dyn_re_0(has_dyn_re_0SEXP);
+    Rcpp::traits::input_parameter< bool >::type has_dyn_re_1(has_dyn_re_1SEXP);
+    Rcpp::traits::input_parameter< int >::type beta_type(beta_typeSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type beta_params(beta_paramsSEXP);
+    Rcpp::traits::input_parameter< int >::type sigma_type(sigma_typeSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type sigma_params(sigma_paramsSEXP);
+    Rcpp::traits::input_parameter< int >::type re_type(re_typeSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type re_params(re_paramsSEXP);
+    rcpp_result_gen = Rcpp::wrap(phase_log_posterior_re_custom(params, data, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, n_trans_re, n_dyn_re_0, n_dyn_re_1, has_trans_re, has_dyn_re_0, has_dyn_re_1, beta_type, beta_params, sigma_type, sigma_params, re_type, re_params));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -459,9 +549,13 @@ static const R_CallMethodDef CallEntries[] = {
     {"_phaseR_phase_log_likelihood", (DL_FUNC) &_phaseR_phase_log_likelihood, 5},
     {"_phaseR_phase_log_prior", (DL_FUNC) &_phaseR_phase_log_prior, 4},
     {"_phaseR_phase_log_posterior", (DL_FUNC) &_phaseR_phase_log_posterior, 5},
+    {"_phaseR_phase_log_prior_custom", (DL_FUNC) &_phaseR_phase_log_prior_custom, 8},
+    {"_phaseR_phase_log_posterior_custom", (DL_FUNC) &_phaseR_phase_log_posterior_custom, 9},
     {"_phaseR_phase_log_likelihood_re", (DL_FUNC) &_phaseR_phase_log_likelihood_re, 11},
     {"_phaseR_phase_log_prior_re", (DL_FUNC) &_phaseR_phase_log_prior_re, 10},
     {"_phaseR_phase_log_posterior_re", (DL_FUNC) &_phaseR_phase_log_posterior_re, 11},
+    {"_phaseR_phase_log_prior_re_custom", (DL_FUNC) &_phaseR_phase_log_prior_re_custom, 16},
+    {"_phaseR_phase_log_posterior_re_custom", (DL_FUNC) &_phaseR_phase_log_posterior_re_custom, 17},
     {"_phaseR_phase_log_likelihood_glm", (DL_FUNC) &_phaseR_phase_log_likelihood_glm, 9},
     {"_phaseR_phase_log_prior_glm", (DL_FUNC) &_phaseR_phase_log_prior_glm, 6},
     {"_phaseR_phase_log_posterior_glm", (DL_FUNC) &_phaseR_phase_log_posterior_glm, 9},

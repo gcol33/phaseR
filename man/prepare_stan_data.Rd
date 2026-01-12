@@ -4,7 +4,7 @@
 \alias{prepare_stan_data}
 \title{Prepare data for C++ likelihood}
 \usage{
-prepare_stan_data(model, data)
+prepare_stan_data(model, data, prior = NULL)
 }
 \description{
 Prepare data for C++ likelihood

@@ -6,6 +6,14 @@
 \usage{
 \method{print}{VarCorr_phaseR}(x, ...)
 }
+\arguments{
+\item{x}{A \code{VarCorr_phaseR} object}
+
+\item{...}{Additional arguments (unused)}
+}
+\value{
+Invisibly returns the input object
+}
 \description{
 Print method for VarCorr
 }

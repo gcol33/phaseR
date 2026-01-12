@@ -309,6 +309,11 @@ VarCorr <- function(object) {
 
 
 #' Print method for VarCorr
+#'
+#' @param x A `VarCorr_phaseR` object
+#' @param ... Additional arguments (unused)
+#'
+#' @return Invisibly returns the input object
 #' @export
 print.VarCorr_phaseR <- function(x, ...) {
 

@@ -1,3 +1,21 @@
+# phaseR 1.0.3
+
+## New Features
+
+* **Nested random effects**: Support for `(1|site/plot)` syntax
+  - Automatically expands to `(1|site) + (1|site:plot)`
+  - Three-level nesting: `(1|region/site/plot)`
+  - Creates interaction variables automatically
+  - `validate_nesting()` helper for checking proper nesting structure
+
+## Internal Changes
+
+* New `expand_nested_re()` function for parsing nested syntax
+* New `create_nested_interactions()` for creating interaction columns
+* Extended regex patterns to handle group names with colons
+
+---
+
 # phaseR 1.0.2
 
 ## New Features

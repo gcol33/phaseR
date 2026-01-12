@@ -22,7 +22,7 @@ phaseR provides phase-structured inference for longitudinal data with:
 | Multiple crossed RE | ✓ | ✓ | v1.0.1 |
 | Random slopes (correlated) | ✓ | ✓ | v1.0.2 |
 | Random slopes (uncorrelated) | ✓ | ✓ | v1.0.2 |
-| Nested RE | ✓ | ✗ | v1.0.3 |
+| Nested RE | ✓ | ✓ | v1.0.3 |
 
 ### Inference Backends
 
@@ -161,7 +161,7 @@ phaseR provides phase-structured inference for longitudinal data with:
 | v1.0.0 | Initial release | Done |
 | v1.0.1 | Multiple crossed RE | Done |
 | v1.0.2 | Random slopes | Done |
-| v1.0.3 | Nested RE | Low |
+| v1.0.3 | Nested RE | Done |
 | v1.0.4 | Laplace backend | High |
 | v1.0.5 | Custom priors | Medium |
 | v1.0.6 | LOO-CV | Medium |

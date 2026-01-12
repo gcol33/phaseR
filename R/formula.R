@@ -6,6 +6,7 @@
 #' - `y ~ x + (1 + x|site)` - correlated random intercept and slope
 #' - `y ~ x + (1 + x||site)` - uncorrelated random intercept and slope
 #' - `y ~ x + (0 + x|site)` or `(x|site)` - random slope only
+#' - `y ~ x + (1|site/plot)` - nested random effects (expands to (1|site) + (1|site:plot))
 #'
 #' @param formula A formula potentially containing random effect terms
 #'
@@ -16,6 +17,8 @@
 #'   - `n_re_terms`: Number of RE terms
 #'   - `re_groups`: Character vector of group names (for backward compat)
 #'   - `has_slopes`: Logical, TRUE if any RE term has slopes
+#'   - `has_nested`: Logical, TRUE if nested RE terms were expanded
+#'   - `nested_interactions`: Character vector of interaction terms to create
 #'
 #' @keywords internal
 #'
@@ -23,9 +26,16 @@ parse_formula_re <- function(formula) {
 
   formula_str <- deparse(formula, width.cutoff = 500)
 
+  # First, expand any nested RE terms: (1|a/b) -> (1|a) + (1|a:b)
+  nested_result <- expand_nested_re(formula_str)
+  formula_str <- nested_result$formula_str
+  has_nested <- nested_result$has_nested
+  nested_interactions <- nested_result$interactions
+
   # Pattern for RE terms: (... | group) or (... || group)
   # Captures: full match, content before bar, bar type (| or ||), group name
-  re_pattern <- "\\(\\s*([^|]+?)\\s*(\\|\\|?)\\s*([a-zA-Z_][a-zA-Z0-9_.]*)\\s*\\)"
+  # Group name can include colons for interaction terms like site:plot
+  re_pattern <- "\\(\\s*([^|]+?)\\s*(\\|\\|?)\\s*([a-zA-Z_][a-zA-Z0-9_.:]*(?::[a-zA-Z_][a-zA-Z0-9_.]*)*)\\s*\\)"
   re_matches <- gregexpr(re_pattern, formula_str, perl = TRUE)
 
   if (re_matches[[1]][1] == -1) {
@@ -36,7 +46,9 @@ parse_formula_re <- function(formula) {
       re_terms = list(),
       n_re_terms = 0L,
       re_groups = character(0),
-      has_slopes = FALSE
+      has_slopes = FALSE,
+      has_nested = FALSE,
+      nested_interactions = character(0)
     ))
   }
 
@@ -84,7 +96,82 @@ parse_formula_re <- function(formula) {
     re_terms = re_terms,
     n_re_terms = length(re_terms),
     re_groups = unique(group_names),
-    has_slopes = has_slopes
+    has_slopes = has_slopes,
+    has_nested = has_nested,
+    nested_interactions = nested_interactions
+  )
+}
+
+
+#' Expand nested RE syntax
+#'
+#' Expands `(1|a/b)` to `(1|a) + (1|a:b)` and `(1|a/b/c)` to
+#' `(1|a) + (1|a:b) + (1|a:b:c)`.
+#'
+#' @param formula_str Formula string
+#' @return List with expanded formula_str, has_nested flag, and interactions
+#' @keywords internal
+#'
+expand_nested_re <- function(formula_str) {
+
+  # Pattern for nested RE: (content | group1/group2/...)
+  # The group part contains forward slashes
+  nested_pattern <- "\\(\\s*([^|]+?)\\s*\\|\\s*([a-zA-Z_][a-zA-Z0-9_.]*(?:/[a-zA-Z_][a-zA-Z0-9_.]*)*)\\s*\\)"
+
+  matches <- gregexpr(nested_pattern, formula_str, perl = TRUE)
+
+  if (matches[[1]][1] == -1) {
+    return(list(
+      formula_str = formula_str,
+      has_nested = FALSE,
+      interactions = character(0)
+    ))
+  }
+
+  # Extract matched terms
+  matched_terms <- regmatches(formula_str, matches)[[1]]
+  interactions <- character(0)
+  has_nested <- FALSE
+
+  for (term in matched_terms) {
+    # Parse the term
+    match <- regmatches(term, regexec(nested_pattern, term, perl = TRUE))[[1]]
+    content <- match[2]  # e.g., "1" or "1 + x"
+    groups <- match[3]   # e.g., "site/plot" or "site/plot/subplot"
+
+    # Check if there's actually nesting (contains /)
+    if (!grepl("/", groups)) {
+      next
+    }
+
+    has_nested <- TRUE
+
+    # Split groups
+    group_parts <- strsplit(groups, "/")[[1]]
+
+    # Build expanded terms
+    expanded_terms <- character(0)
+    cumulative_group <- ""
+
+    for (i in seq_along(group_parts)) {
+      if (i == 1) {
+        cumulative_group <- group_parts[i]
+      } else {
+        cumulative_group <- paste(cumulative_group, group_parts[i], sep = ":")
+        interactions <- c(interactions, cumulative_group)
+      }
+      expanded_terms <- c(expanded_terms, sprintf("(%s|%s)", content, cumulative_group))
+    }
+
+    # Replace the nested term with expanded terms
+    replacement <- paste(expanded_terms, collapse = " + ")
+    formula_str <- sub(term, replacement, formula_str, fixed = TRUE)
+  }
+
+  list(
+    formula_str = formula_str,
+    has_nested = has_nested,
+    interactions = unique(interactions)
   )
 }
 
@@ -98,7 +185,8 @@ parse_formula_re <- function(formula) {
 parse_re_term <- function(term_str) {
 
   # Extract parts: content | group or content || group
-  pattern <- "\\(\\s*(.+?)\\s*(\\|\\|?)\\s*([a-zA-Z_][a-zA-Z0-9_.]*)\\s*\\)"
+  # Group name can include colons for interaction terms like site:plot
+  pattern <- "\\(\\s*(.+?)\\s*(\\|\\|?)\\s*([a-zA-Z_][a-zA-Z0-9_.:]*(?::[a-zA-Z_][a-zA-Z0-9_.]*)*)\\s*\\)"
   match <- regmatches(term_str, regexec(pattern, term_str, perl = TRUE))[[1]]
 
   if (length(match) < 4) {

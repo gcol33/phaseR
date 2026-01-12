@@ -18,6 +18,8 @@ A list with:
 \item \code{n_re_terms}: Number of RE terms
 \item \code{re_groups}: Character vector of group names (for backward compat)
 \item \code{has_slopes}: Logical, TRUE if any RE term has slopes
+\item \code{has_nested}: Logical, TRUE if nested RE terms were expanded
+\item \code{nested_interactions}: Character vector of interaction terms to create
 }
 }
 \description{
@@ -28,6 +30,7 @@ Supports:
 \item \code{y ~ x + (1 + x|site)} - correlated random intercept and slope
 \item \code{y ~ x + (1 + x||site)} - uncorrelated random intercept and slope
 \item \code{y ~ x + (0 + x|site)} or \code{(x|site)} - random slope only
+\item \code{y ~ x + (1|site/plot)} - nested random effects (expands to (1|site) + (1|site:plot))
 }
 }
 \keyword{internal}

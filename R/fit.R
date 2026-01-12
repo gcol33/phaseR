@@ -107,6 +107,16 @@ prepare_stan_data <- function(model, data) {
   dyn_parsed_0 <- parse_formula_re(dyn_formula_0)
   dyn_parsed_1 <- parse_formula_re(dyn_formula_1)
 
+  # Create interaction variables for nested RE terms
+  all_interactions <- unique(c(
+    trans_parsed$nested_interactions,
+    dyn_parsed_0$nested_interactions,
+    dyn_parsed_1$nested_interactions
+  ))
+  if (length(all_interactions) > 0) {
+    data <- create_nested_interactions(data, all_interactions)
+  }
+
   # Build design matrices using fixed-effects formulas
   X_trans <- model.matrix(trans_parsed$fixed_formula, data)
   X_dyn_0 <- model.matrix(update(dyn_parsed_0$fixed_formula, NULL ~ .), data)
@@ -231,6 +241,71 @@ prepare_stan_data <- function(model, data) {
     # Random slopes flag (v1.0.2+)
     has_slopes = has_slopes
   )
+}
+
+
+#' Create interaction variables for nested RE
+#'
+#' Creates columns like "site:plot" from "site" and "plot" columns.
+#'
+#' @param data Data frame
+#' @param interactions Character vector of interaction terms (e.g., "site:plot")
+#' @return Modified data frame with new columns
+#' @keywords internal
+#'
+create_nested_interactions <- function(data, interactions) {
+
+  for (int_term in interactions) {
+    if (int_term %in% names(data)) {
+      next  # Already exists
+    }
+
+    # Split the interaction term
+    parts <- strsplit(int_term, ":")[[1]]
+
+    # Validate all parts exist
+    missing <- parts[!parts %in% names(data)]
+    if (length(missing) > 0) {
+      stop(sprintf("Grouping variable(s) '%s' not found in data",
+                   paste(missing, collapse = "', '")), call. = FALSE)
+    }
+
+    # Create the interaction variable using base::interaction
+    int_args <- lapply(parts, function(p) data[[p]])
+    int_args$drop <- TRUE
+    int_args$sep <- ":"
+    interaction_values <- do.call(base::interaction, int_args)
+    data[[int_term]] <- interaction_values
+  }
+
+  data
+}
+
+
+#' Validate nested structure
+#'
+#' Checks that nested groups are properly nested (each level of b is within one level of a).
+#'
+#' @param data Data frame
+#' @param outer Outer grouping variable name
+#' @param inner Inner grouping variable name
+#' @return TRUE if valid, otherwise throws an error
+#' @keywords internal
+#'
+validate_nesting <- function(data, outer, inner) {
+
+  # For each level of inner, there should be exactly one level of outer
+  mapping <- unique(data[, c(outer, inner), drop = FALSE])
+  inner_counts <- table(mapping[[inner]])
+
+  if (any(inner_counts > 1)) {
+    bad_levels <- names(inner_counts)[inner_counts > 1]
+    stop(sprintf("Invalid nesting: '%s' levels appear in multiple '%s' groups: %s",
+                 inner, outer, paste(bad_levels[1:min(3, length(bad_levels))], collapse = ", ")),
+         call. = FALSE)
+  }
+
+  TRUE
 }
 
 

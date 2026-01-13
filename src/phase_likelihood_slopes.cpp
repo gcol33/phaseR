@@ -120,13 +120,13 @@ double phase_log_likelihood_slopes(
   double sigma_0 = std::exp(log_sigma_0);
   double sigma_1 = std::exp(log_sigma_1);
 
-  // Parse RE info for transition
-  int n_trans_re_terms = trans_re_info["n_terms"];
-  IntegerVector trans_n_groups = trans_re_info["n_groups_vec"];
-  IntegerVector trans_n_coefs = trans_re_info["n_coefs_vec"];
-  List trans_idx_list = trans_re_info["idx_list"];
-  List trans_Z_list = trans_re_info["Z_list"];
-  LogicalVector trans_correlated = trans_re_info["correlated_vec"];
+  // Parse RE info for transition - use eager copies
+  int n_trans_re_terms = Rcpp::as<int>(trans_re_info["n_terms"]);
+  std::vector<int> trans_n_groups = Rcpp::as<std::vector<int>>(trans_re_info["n_groups_vec"]);
+  std::vector<int> trans_n_coefs = Rcpp::as<std::vector<int>>(trans_re_info["n_coefs_vec"]);
+  List trans_idx_list = Rcpp::as<List>(trans_re_info["idx_list"]);
+  List trans_Z_list = Rcpp::as<List>(trans_re_info["Z_list"]);
+  std::vector<int> trans_correlated = Rcpp::as<std::vector<int>>(trans_re_info["correlated_vec"]);
 
   // Extract transition RE values and covariance params
   std::vector<std::vector<std::vector<double>>> u_trans(n_trans_re_terms);
@@ -177,13 +177,13 @@ double phase_log_likelihood_slopes(
     }
   }
 
-  // Parse RE info for dynamics 0
-  int n_dyn_re_terms_0 = dyn_re_info_0["n_terms"];
-  IntegerVector dyn_n_groups_0 = dyn_re_info_0["n_groups_vec"];
-  IntegerVector dyn_n_coefs_0 = dyn_re_info_0["n_coefs_vec"];
-  List dyn_idx_list_0 = dyn_re_info_0["idx_list"];
-  List dyn_Z_list_0 = dyn_re_info_0["Z_list"];
-  LogicalVector dyn_correlated_0 = dyn_re_info_0["correlated_vec"];
+  // Parse RE info for dynamics 0 - use eager copies
+  int n_dyn_re_terms_0 = Rcpp::as<int>(dyn_re_info_0["n_terms"]);
+  std::vector<int> dyn_n_groups_0 = Rcpp::as<std::vector<int>>(dyn_re_info_0["n_groups_vec"]);
+  std::vector<int> dyn_n_coefs_0 = Rcpp::as<std::vector<int>>(dyn_re_info_0["n_coefs_vec"]);
+  List dyn_idx_list_0 = Rcpp::as<List>(dyn_re_info_0["idx_list"]);
+  List dyn_Z_list_0 = Rcpp::as<List>(dyn_re_info_0["Z_list"]);
+  std::vector<int> dyn_correlated_0 = Rcpp::as<std::vector<int>>(dyn_re_info_0["correlated_vec"]);
 
   std::vector<std::vector<std::vector<double>>> v_0(n_dyn_re_terms_0);
 
@@ -228,13 +228,13 @@ double phase_log_likelihood_slopes(
     }
   }
 
-  // Parse RE info for dynamics 1
-  int n_dyn_re_terms_1 = dyn_re_info_1["n_terms"];
-  IntegerVector dyn_n_groups_1 = dyn_re_info_1["n_groups_vec"];
-  IntegerVector dyn_n_coefs_1 = dyn_re_info_1["n_coefs_vec"];
-  List dyn_idx_list_1 = dyn_re_info_1["idx_list"];
-  List dyn_Z_list_1 = dyn_re_info_1["Z_list"];
-  LogicalVector dyn_correlated_1 = dyn_re_info_1["correlated_vec"];
+  // Parse RE info for dynamics 1 - use eager copies
+  int n_dyn_re_terms_1 = Rcpp::as<int>(dyn_re_info_1["n_terms"]);
+  std::vector<int> dyn_n_groups_1 = Rcpp::as<std::vector<int>>(dyn_re_info_1["n_groups_vec"]);
+  std::vector<int> dyn_n_coefs_1 = Rcpp::as<std::vector<int>>(dyn_re_info_1["n_coefs_vec"]);
+  List dyn_idx_list_1 = Rcpp::as<List>(dyn_re_info_1["idx_list"]);
+  List dyn_Z_list_1 = Rcpp::as<List>(dyn_re_info_1["Z_list"]);
+  std::vector<int> dyn_correlated_1 = Rcpp::as<std::vector<int>>(dyn_re_info_1["correlated_vec"]);
 
   std::vector<std::vector<std::vector<double>>> v_1(n_dyn_re_terms_1);
 
@@ -279,14 +279,14 @@ double phase_log_likelihood_slopes(
     }
   }
 
-  // Data
-  NumericVector y = data["y"];
-  NumericMatrix X_trans = data["X_trans"];
-  NumericMatrix X_dyn = data["X_dyn"];
+  // Data - use eager deep copies to prevent R GC issues
+  std::vector<double> y = Rcpp::as<std::vector<double>>(data["y"]);
+  NumericMatrix X_trans = Rcpp::as<NumericMatrix>(data["X_trans"]);
+  NumericMatrix X_dyn = Rcpp::as<NumericMatrix>(data["X_dyn"]);
 
-  int n_units = data["n_units"];
-  IntegerVector unit_start = data["unit_start"];
-  IntegerVector unit_end = data["unit_end"];
+  int n_units = Rcpp::as<int>(data["n_units"]);
+  std::vector<int> unit_start = Rcpp::as<std::vector<int>>(data["unit_start"]);
+  std::vector<int> unit_end = Rcpp::as<std::vector<int>>(data["unit_end"]);
 
   double total_ll = 0.0;
 
@@ -439,11 +439,11 @@ double phase_log_prior_slopes(
   log_prior += -0.5 * std::log(2.0 * M_PI) - 0.5 * log_sigma_0 * log_sigma_0;
   log_prior += -0.5 * std::log(2.0 * M_PI) - 0.5 * log_sigma_1 * log_sigma_1;
 
-  // Transition RE priors
-  int n_trans_re_terms = trans_re_info["n_terms"];
-  IntegerVector trans_n_groups = trans_re_info["n_groups_vec"];
-  IntegerVector trans_n_coefs = trans_re_info["n_coefs_vec"];
-  LogicalVector trans_correlated = trans_re_info["correlated_vec"];
+  // Transition RE priors - use eager copies
+  int n_trans_re_terms = Rcpp::as<int>(trans_re_info["n_terms"]);
+  std::vector<int> trans_n_groups = Rcpp::as<std::vector<int>>(trans_re_info["n_groups_vec"]);
+  std::vector<int> trans_n_coefs = Rcpp::as<std::vector<int>>(trans_re_info["n_coefs_vec"]);
+  std::vector<int> trans_correlated = Rcpp::as<std::vector<int>>(trans_re_info["correlated_vec"]);
 
   for (int r = 0; r < n_trans_re_terms; r++) {
     int n_g = trans_n_groups[r];
@@ -512,11 +512,11 @@ double phase_log_prior_slopes(
     }
   }
 
-  // Dynamics 0 RE priors (same logic)
-  int n_dyn_re_terms_0 = dyn_re_info_0["n_terms"];
-  IntegerVector dyn_n_groups_0 = dyn_re_info_0["n_groups_vec"];
-  IntegerVector dyn_n_coefs_0 = dyn_re_info_0["n_coefs_vec"];
-  LogicalVector dyn_correlated_0 = dyn_re_info_0["correlated_vec"];
+  // Dynamics 0 RE priors (same logic) - use eager copies
+  int n_dyn_re_terms_0 = Rcpp::as<int>(dyn_re_info_0["n_terms"]);
+  std::vector<int> dyn_n_groups_0 = Rcpp::as<std::vector<int>>(dyn_re_info_0["n_groups_vec"]);
+  std::vector<int> dyn_n_coefs_0 = Rcpp::as<std::vector<int>>(dyn_re_info_0["n_coefs_vec"]);
+  std::vector<int> dyn_correlated_0 = Rcpp::as<std::vector<int>>(dyn_re_info_0["correlated_vec"]);
 
   for (int r = 0; r < n_dyn_re_terms_0; r++) {
     int n_g = dyn_n_groups_0[r];
@@ -576,11 +576,11 @@ double phase_log_prior_slopes(
     }
   }
 
-  // Dynamics 1 RE priors
-  int n_dyn_re_terms_1 = dyn_re_info_1["n_terms"];
-  IntegerVector dyn_n_groups_1 = dyn_re_info_1["n_groups_vec"];
-  IntegerVector dyn_n_coefs_1 = dyn_re_info_1["n_coefs_vec"];
-  LogicalVector dyn_correlated_1 = dyn_re_info_1["correlated_vec"];
+  // Dynamics 1 RE priors - use eager copies
+  int n_dyn_re_terms_1 = Rcpp::as<int>(dyn_re_info_1["n_terms"]);
+  std::vector<int> dyn_n_groups_1 = Rcpp::as<std::vector<int>>(dyn_re_info_1["n_groups_vec"]);
+  std::vector<int> dyn_n_coefs_1 = Rcpp::as<std::vector<int>>(dyn_re_info_1["n_coefs_vec"]);
+  std::vector<int> dyn_correlated_1 = Rcpp::as<std::vector<int>>(dyn_re_info_1["correlated_vec"]);
 
   for (int r = 0; r < n_dyn_re_terms_1; r++) {
     int n_g = dyn_n_groups_1[r];

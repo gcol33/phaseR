@@ -1,5 +1,6 @@
 #include <Rcpp.h>
 #include <cmath>
+#include <vector>
 #include "prior_functions.h"
 
 using namespace Rcpp;
@@ -57,20 +58,20 @@ double phase_log_likelihood(
   double sigma_0 = std::exp(log_sigma_0);
   double sigma_1 = std::exp(log_sigma_1);
 
-  // Unpack data
-  IntegerVector id = data["id"];
-  NumericVector y = data["y"];
-  NumericMatrix X_trans = data["X_trans"];
-  NumericMatrix X_dyn = data["X_dyn"];
+  // Unpack data - use eager deep copies to prevent R GC issues
+  std::vector<int> id = Rcpp::as<std::vector<int>>(data["id"]);
+  std::vector<double> y = Rcpp::as<std::vector<double>>(data["y"]);
+  NumericMatrix X_trans = Rcpp::as<NumericMatrix>(data["X_trans"]);
+  NumericMatrix X_dyn = Rcpp::as<NumericMatrix>(data["X_dyn"]);
 
   int N = y.size();
-  int n_units = data["n_units"];
+  int n_units = Rcpp::as<int>(data["n_units"]);
 
   // Forward algorithm for each unit
   double total_ll = 0.0;
 
-  IntegerVector unit_start = data["unit_start"];
-  IntegerVector unit_end = data["unit_end"];
+  std::vector<int> unit_start = Rcpp::as<std::vector<int>>(data["unit_start"]);
+  std::vector<int> unit_end = Rcpp::as<std::vector<int>>(data["unit_end"]);
 
   for (int i = 0; i < n_units; i++) {
 
@@ -312,23 +313,23 @@ double phase_log_likelihood_re(
   double sigma_0 = std::exp(log_sigma_0);
   double sigma_1 = std::exp(log_sigma_1);
 
-  // Data
-  NumericVector y = data["y"];
-  NumericMatrix X_trans = data["X_trans"];
-  NumericMatrix X_dyn = data["X_dyn"];
+  // Data - use eager deep copies to prevent R GC issues
+  std::vector<double> y = Rcpp::as<std::vector<double>>(data["y"]);
+  NumericMatrix X_trans = Rcpp::as<NumericMatrix>(data["X_trans"]);
+  NumericMatrix X_dyn = Rcpp::as<NumericMatrix>(data["X_dyn"]);
 
-  int n_units = data["n_units"];
-  IntegerVector unit_start = data["unit_start"];
-  IntegerVector unit_end = data["unit_end"];
+  int n_units = Rcpp::as<int>(data["n_units"]);
+  std::vector<int> unit_start = Rcpp::as<std::vector<int>>(data["unit_start"]);
+  std::vector<int> unit_end = Rcpp::as<std::vector<int>>(data["unit_end"]);
 
-  // RE indices (1-indexed from R)
-  IntegerVector trans_re_idx;
-  IntegerVector dyn_re_idx_0;
-  IntegerVector dyn_re_idx_1;
+  // RE indices (1-indexed from R) - eager copies
+  std::vector<int> trans_re_idx;
+  std::vector<int> dyn_re_idx_0;
+  std::vector<int> dyn_re_idx_1;
 
-  if (has_trans_re) trans_re_idx = data["trans_re_idx"];
-  if (has_dyn_re_0) dyn_re_idx_0 = data["dyn_re_idx_0"];
-  if (has_dyn_re_1) dyn_re_idx_1 = data["dyn_re_idx_1"];
+  if (has_trans_re) trans_re_idx = Rcpp::as<std::vector<int>>(data["trans_re_idx"]);
+  if (has_dyn_re_0) dyn_re_idx_0 = Rcpp::as<std::vector<int>>(data["dyn_re_idx_0"]);
+  if (has_dyn_re_1) dyn_re_idx_1 = Rcpp::as<std::vector<int>>(data["dyn_re_idx_1"]);
 
   double total_ll = 0.0;
 

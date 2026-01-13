@@ -1,5 +1,6 @@
 #include <Rcpp.h>
 #include <cmath>
+#include <vector>
 
 using namespace Rcpp;
 
@@ -95,12 +96,13 @@ double phase_log_likelihood_glm(
   double sigma_0 = std::exp(log_sigma_0);
   double sigma_1 = std::exp(log_sigma_1);
 
-  NumericVector y = data["y"];
-  NumericMatrix X_trans = data["X_trans"];
-  NumericMatrix X_dyn = data["X_dyn"];
-  int n_units = data["n_units"];
-  IntegerVector unit_start = data["unit_start"];
-  IntegerVector unit_end = data["unit_end"];
+  // Use eager deep copies to prevent R GC issues
+  std::vector<double> y = Rcpp::as<std::vector<double>>(data["y"]);
+  NumericMatrix X_trans = Rcpp::as<NumericMatrix>(data["X_trans"]);
+  NumericMatrix X_dyn = Rcpp::as<NumericMatrix>(data["X_dyn"]);
+  int n_units = Rcpp::as<int>(data["n_units"]);
+  std::vector<int> unit_start = Rcpp::as<std::vector<int>>(data["unit_start"]);
+  std::vector<int> unit_end = Rcpp::as<std::vector<int>>(data["unit_end"]);
 
   double total_ll = 0.0;
 

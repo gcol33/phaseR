@@ -1,5 +1,6 @@
 #include <Rcpp.h>
 #include <cmath>
+#include <vector>
 
 using namespace Rcpp;
 
@@ -56,10 +57,10 @@ double phase_log_likelihood_multi_re(
   double sigma_0 = std::exp(log_sigma_0);
   double sigma_1 = std::exp(log_sigma_1);
 
-  // Parse multi-RE info for transition
-  int n_trans_re_terms = trans_re_info["n_terms"];
-  IntegerVector trans_n_groups = trans_re_info["n_groups_vec"];
-  List trans_idx_list = trans_re_info["idx_list"];
+  // Parse multi-RE info for transition - use eager copies
+  int n_trans_re_terms = Rcpp::as<int>(trans_re_info["n_terms"]);
+  std::vector<int> trans_n_groups = Rcpp::as<std::vector<int>>(trans_re_info["n_groups_vec"]);
+  List trans_idx_list = Rcpp::as<List>(trans_re_info["idx_list"]);
 
   // Extract transition RE values
   std::vector<NumericVector> u_trans(n_trans_re_terms);
@@ -73,10 +74,10 @@ double phase_log_likelihood_multi_re(
     u_trans[r] = u_r;
   }
 
-  // Parse multi-RE info for dynamics 0
-  int n_dyn_re_terms_0 = dyn_re_info_0["n_terms"];
-  IntegerVector dyn_n_groups_0 = dyn_re_info_0["n_groups_vec"];
-  List dyn_idx_list_0 = dyn_re_info_0["idx_list"];
+  // Parse multi-RE info for dynamics 0 - use eager copies
+  int n_dyn_re_terms_0 = Rcpp::as<int>(dyn_re_info_0["n_terms"]);
+  std::vector<int> dyn_n_groups_0 = Rcpp::as<std::vector<int>>(dyn_re_info_0["n_groups_vec"]);
+  List dyn_idx_list_0 = Rcpp::as<List>(dyn_re_info_0["idx_list"]);
 
   std::vector<NumericVector> v_0(n_dyn_re_terms_0);
   for (int r = 0; r < n_dyn_re_terms_0; r++) {
@@ -89,10 +90,10 @@ double phase_log_likelihood_multi_re(
     v_0[r] = v_r;
   }
 
-  // Parse multi-RE info for dynamics 1
-  int n_dyn_re_terms_1 = dyn_re_info_1["n_terms"];
-  IntegerVector dyn_n_groups_1 = dyn_re_info_1["n_groups_vec"];
-  List dyn_idx_list_1 = dyn_re_info_1["idx_list"];
+  // Parse multi-RE info for dynamics 1 - use eager copies
+  int n_dyn_re_terms_1 = Rcpp::as<int>(dyn_re_info_1["n_terms"]);
+  std::vector<int> dyn_n_groups_1 = Rcpp::as<std::vector<int>>(dyn_re_info_1["n_groups_vec"]);
+  List dyn_idx_list_1 = Rcpp::as<List>(dyn_re_info_1["idx_list"]);
 
   std::vector<NumericVector> v_1(n_dyn_re_terms_1);
   for (int r = 0; r < n_dyn_re_terms_1; r++) {
@@ -105,14 +106,14 @@ double phase_log_likelihood_multi_re(
     v_1[r] = v_r;
   }
 
-  // Data
-  NumericVector y = data["y"];
-  NumericMatrix X_trans = data["X_trans"];
-  NumericMatrix X_dyn = data["X_dyn"];
+  // Data - use eager deep copies to prevent R GC issues
+  std::vector<double> y = Rcpp::as<std::vector<double>>(data["y"]);
+  NumericMatrix X_trans = Rcpp::as<NumericMatrix>(data["X_trans"]);
+  NumericMatrix X_dyn = Rcpp::as<NumericMatrix>(data["X_dyn"]);
 
-  int n_units = data["n_units"];
-  IntegerVector unit_start = data["unit_start"];
-  IntegerVector unit_end = data["unit_end"];
+  int n_units = Rcpp::as<int>(data["n_units"]);
+  std::vector<int> unit_start = Rcpp::as<std::vector<int>>(data["unit_start"]);
+  std::vector<int> unit_end = Rcpp::as<std::vector<int>>(data["unit_end"]);
 
   double total_ll = 0.0;
 

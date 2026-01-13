@@ -78,14 +78,14 @@ double phase_log_likelihood_k(
     sigma[p] = std::exp(log_sigma);
   }
 
-  // Data
-  NumericVector y = data["y"];
-  List X_trans_list = data["X_trans_list"];  // List of matrices
-  List X_dyn_list = data["X_dyn_list"];      // List of matrices
+  // Data - use eager deep copies to prevent R GC issues
+  std::vector<double> y = Rcpp::as<std::vector<double>>(data["y"]);
+  List X_trans_list = Rcpp::as<List>(data["X_trans_list"]);  // List of matrices
+  List X_dyn_list = Rcpp::as<List>(data["X_dyn_list"]);      // List of matrices
 
-  int n_units = data["n_units"];
-  IntegerVector unit_start = data["unit_start"];
-  IntegerVector unit_end = data["unit_end"];
+  int n_units = Rcpp::as<int>(data["n_units"]);
+  std::vector<int> unit_start = Rcpp::as<std::vector<int>>(data["unit_start"]);
+  std::vector<int> unit_end = Rcpp::as<std::vector<int>>(data["unit_end"]);
 
   // Forward algorithm
   double total_ll = 0.0;

@@ -1,5 +1,7 @@
 # phaseR
 
+> Small exact engines for scientific computing in R.
+
 *what before-and-after comparisons miss*
 
 <!-- badges: start -->

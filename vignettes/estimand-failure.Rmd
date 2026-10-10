@@ -16,6 +16,13 @@ knitr::opts_chunk$set(
 )
 ```
 
+## Installation
+
+```{r, eval = FALSE}
+# install.packages("pak")
+pak::pak("gcol33/phaseR")
+```
+
 ## The Problem
 
 A common analytical pattern in longitudinal data is to:

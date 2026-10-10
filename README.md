@@ -13,6 +13,15 @@
 
 `phaseR` treats "before" and "after" as latent regimes and models two things at once: the transition that moves a unit between regimes, and the outcome dynamics within each regime. The sampler marginalizes over which regime each observation belongs to, so estimates never condition on the realized transition. Splitting your data at the observed change point and comparing the two halves does condition on it, which biases the comparison whenever the chance of transitioning depends on the same covariates that drive the outcome.
 
+## Installation
+
+```r
+# install.packages("pak")
+pak::pak("gcol33/phaseR")
+```
+
+## Quick start
+
 ```r
 library(phaseR)
 
@@ -81,13 +90,6 @@ model <- phase_model(
 ## Where it applies
 
 Any longitudinal setting with a latent before/after where the chance of crossing over depends on covariates that also shape the outcome: disease onset and recovery, treatment adoption, technology uptake, behavioral change, ecological regime shifts.
-
-## Installation
-
-```r
-# install.packages("pak")
-pak::pak("gcol33/phaseR")
-```
 
 ## Documentation
 

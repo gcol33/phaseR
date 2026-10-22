@@ -23,3 +23,5 @@ Thumbs.db
 # Documentation
 docs/
 inst/doc
+
+.run*

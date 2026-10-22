@@ -1,82 +1,191 @@
+
 # phaseR
 
-*what before-and-after comparisons miss*
+*longitudinal change as a switch between regimes*
 
 <!-- badges: start -->
-[![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
+
 [![R-CMD-check](https://github.com/gcol33/phaseR/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/gcol33/phaseR/actions/workflows/R-CMD-check.yaml)
-[![Codecov test coverage](https://codecov.io/gh/gcol33/phaseR/graph/badge.svg)](https://app.codecov.io/gh/gcol33/phaseR)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Codecov test
+coverage](https://codecov.io/gh/gcol33/phaseR/graph/badge.svg)](https://app.codecov.io/gh/gcol33/phaseR)
+[![License:
+MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 <!-- badges: end -->
 
-**Joint Bayesian inference for longitudinal change, fit by a native NUTS sampler in C++.**
+phaseR fits Bayesian models of change in longitudinal data, such as
+disease onset and recovery, treatment adoption or an ecological regime
+shift, in which each unit moves from a “before” regime to an “after”
+regime.
 
-`phaseR` treats "before" and "after" as latent regimes and models two things at once: the transition that moves a unit between regimes, and the outcome dynamics within each regime. The sampler marginalizes over which regime each observation belongs to, so estimates never condition on the realized transition. Splitting your data at the observed change point and comparing the two halves does condition on it, which biases the comparison whenever the chance of transitioning depends on the same covariates that drive the outcome.
+The package treats “before” and “after” as latent regimes and models two
+things jointly: the transition that moves a unit between regimes, and
+the outcome dynamics within each regime. The likelihood sums over the
+regime each observation may belong to, so the estimates do not condition
+on the realized transition. Splitting the data at the observed change
+point and comparing the two halves does condition on it, which biases
+the comparison whenever the chance of transitioning depends on the same
+covariates that drive the outcome. From a fit you can estimate regime
+effects and counterfactual outcomes, and decide which comparison answers
+your question. phaseR supports:
+
+- **More than two regimes.** Ordered phases such as
+  `phases("susceptible", "infected", "recovered")`, with one
+  `transition()` per consecutive pair.
+- **Non-Gaussian outcomes.** Gaussian, Poisson and binomial dynamics,
+  set per phase.
+- **Random effects.** Random intercepts `(1 | group)`, crossed
+  `(1 | site) + (1 | year)`, random slopes `(1 + x | group)` and nested
+  `(1 | site/plot)`.
+- **Custom priors.** [`prior()`](#usage) with `normal()`, `student_t()`,
+  `cauchy()`, `half_normal()`, `half_cauchy()` and `lkj()`.
+- **Counterfactual effects.** `ate()`, `ite()` and `counterfactual()`
+  predict outcomes under covariate values that were never observed,
+  integrating over phase uncertainty.
+- **Model comparison.** WAIC with `waic()` and `compare_waic()`, and
+  leave-one-out cross-validation by Pareto-smoothed importance sampling
+  with `loo()` and `loo_compare()`.
+
+The default backend is a Hamiltonian Monte Carlo sampler written in C++
+with Rcpp, so no Stan, JAGS or other inference engine has to be
+installed. [Why Conditioning on Realized Change
+Fails](vignettes/estimand-failure.Rmd) runs the before/after estimate
+and the phaseR estimate against a known truth on simulated data.
 
 ## Installation
 
-```r
+The package compiles C++ code. Install the build tools for your
+operating system first:
+
+| Operating system | Build tools                                              |
+|------------------|----------------------------------------------------------|
+| Windows          | [Rtools](https://cran.r-project.org/bin/windows/Rtools/) |
+| macOS            | Run `xcode-select --install` in Terminal                 |
+| Debian / Ubuntu  | Install `r-base-dev`                                     |
+
+Check that R can find the compiler:
+
+``` r
+pkgbuild::has_build_tools(debug = TRUE)
+```
+
+Then install phaseR:
+
+``` r
 # install.packages("pak")
 pak::pak("gcol33/phaseR")
 ```
 
-## Quick start
+The C++ code is compiled with Rcpp to the C++17 standard and needs no
+system libraries.
 
-```r
+## Usage
+
+1.  Declare the regimes with `phases()`, the transition model with
+    `transition()` and the outcome model of each regime with
+    `dynamics()`, and combine them with `phase_model()`.
+2.  Fit the model to long-format data (one row per unit and time) with
+    `fit_phaseR()`.
+3.  Read the coefficients with `summary()`, and estimate effects with
+    `ate()`, `ite()` or `counterfactual()`.
+
+`sim_phaseR()` simulates data with a unit identifier `id`, a time index
+`time`, a covariate `x`, an outcome `y` and the true phase. The
+transition depends on `x`, and each regime has its own regression of `y`
+on `x`:
+
+``` r
 library(phaseR)
 
 dat <- sim_phaseR(n_units = 100, n_times = 5, seed = 42)
 
 model <- phase_model(
   phases("inactive", "active"),
-  transition("inactive", "active", ~ x),   # what moves a unit between regimes
-  dynamics("inactive", y ~ x),             # outcome model in each regime
-  dynamics("active",   y ~ x)
+  transition("inactive", "active", ~ x),
+  dynamics("inactive", y ~ x),
+  dynamics("active", y ~ x)
 )
 
-fit <- fit_phaseR(model, data = dat, chains = 2, iter = 1000, seed = 42)
+fit <- fit_phaseR(model, data = dat, backend = "laplace", seed = 42)
 summary(fit)
+#> Phase Model Summary
+#> Phases: inactive -> active
+#> 
+#> Transition coefficients:
+#>                         mean   sd  2.5% median 97.5% Rhat ESS
+#> beta_trans_(Intercept) -0.92 0.24 -1.39  -0.92 -0.47   NA 995
+#> beta_trans_x            0.42 0.25 -0.08   0.42  0.90   NA 858
+#> 
+#> Dynamics coefficients (inactive):
+#>                           mean   sd  2.5% median 97.5% Rhat  ESS
+#> beta_inactive_(Intercept) 9.88 0.08  9.72   9.88 10.03   NA  929
+#> beta_inactive_x           0.06 0.07 -0.07   0.06  0.19   NA 1000
+#> 
+#> Dynamics coefficients (active):
+#>                          mean   sd  2.5% median 97.5% Rhat ESS
+#> beta_active_(Intercept)  7.95 0.15  7.65   7.96  8.24   NA 836
+#> beta_active_x           -0.47 0.13 -0.72  -0.47 -0.22   NA 961
+#> 
+#> Variance parameters:
+#>                    mean   sd  2.5% median 97.5% Rhat  ESS
+#> log_sigma_inactive 0.04 0.05 -0.05   0.04  0.14   NA  942
+#> log_sigma_active   0.41 0.06  0.30   0.40  0.52   NA 1000
 ```
 
-## Why before/after comparison is biased
+`backend = "laplace"` approximates the posterior by a Gaussian at its
+mode and returns within a second. The default backend, `"hmc"`, samples
+the posterior with Hamiltonian Monte Carlo, and `chains` and `iter` set
+the number of chains and the iterations per chain:
 
-Compare the outcomes of units that transitioned, before versus after, and you have stratified on a realized outcome. When units with certain covariate values are both more likely to transition and have different outcomes, the difference you measure mixes the regime effect with that selection. The bias survives any amount of data.
-
-`phaseR` writes down the full generative process instead: a logistic transition model for regime membership and a per-regime outcome model, fit jointly. The likelihood integrates over the latent regime of every observation (a log-sum-exp over phase assignments), so the selection mechanism is part of the model rather than a thing you condition away. The [`estimand-failure`](vignettes/estimand-failure.Rmd) vignette runs the biased before/after estimate and the `phaseR` estimate against a known truth on simulated data.
-
-## Counterfactuals once you have a fit
-
-Because the transition and dynamics are modeled together, you can ask what outcomes would have looked like under covariate values you never observed, integrating over phase uncertainty:
-
-```r
-ate(fit, treatment_var = "x")                          # average treatment effect, with a credible interval
-
-counterfactual(fit, newdata = transform(dat, x = 1))   # predicted outcomes under x = 1
-ite(fit, treatment_var = "x")                          # per-unit effects
+``` r
+fit <- fit_phaseR(model, data = dat, chains = 2, iter = 1000, seed = 42)
 ```
 
-## What the sampler handles
+## Why splitting at the change point is biased
 
-- **k regimes**: arbitrary sequential phases, declared with `phases("susceptible", "infected", "recovered")` and one `transition()` per consecutive pair.
-- **GLM outcomes**: Gaussian, Poisson, and Binomial dynamics, set per phase.
-- **Random effects**: random intercepts `(1 | group)`, crossed `(1|site) + (1|year)`, random slopes `(1 + x | group)`, and nested `(1|site/plot)`.
-- **Custom priors**: `prior(beta ~ normal(0, 2.5), sigma ~ half_cauchy(1))`, with `normal()`, `student_t()`, `cauchy()`, `half_normal()`, `half_cauchy()`, and `lkj()`.
-- **Model comparison**: `waic()` / `compare_waic()`, and LOO-CV via PSIS with `loo()` / `loo_compare()`.
+Comparing the outcomes of units that transitioned, before against after,
+stratifies on a realized outcome. When units with certain covariate
+values are both more likely to transition and have different outcomes,
+the measured difference mixes the regime effect with that selection, and
+the bias does not shrink with more data.
 
-The NUTS sampler is written from scratch in C++ via Rcpp. There is no Stan, JAGS, or other external inference engine to install.
+phaseR writes down the full generative process instead: a logistic
+transition model for regime membership and an outcome model per regime,
+fitted jointly. The likelihood sums over the latent regime of every
+observation with a log-sum-exp over phase assignments, so the selection
+mechanism is part of the model. [Why Conditioning on Realized Change
+Fails](vignettes/estimand-failure.Rmd) shows the bias on simulated data
+with a known effect.
 
-## Specifying a model
+## Counterfactual effects
 
-```r
-phases("susceptible", "infected", "recovered")        # ordered regimes
+Because the transition and the dynamics are modelled together, a fit
+predicts outcomes under covariate values that were never observed,
+integrating over phase uncertainty. `ate()` returns the average effect
+of setting `x` to 1 against 0, with a 95% credible interval:
 
-transition("susceptible", "infected", ~ exposure + age)
-transition("infected", "recovered", ~ treatment)      # one per consecutive pair
+``` r
+effect <- ate(fit, treatment_var = "x")
+effect$ate
+#> [1] -0.3821998
+effect$ate_ci
+#>        2.5%       97.5% 
+#> -0.71036013 -0.06097235
+```
 
-dynamics("susceptible", y ~ 1)
-dynamics("infected",    y ~ time_since_infection)      # outcome model per regime
-dynamics("recovered",   y ~ 1)
+`counterfactual()` predicts outcomes for new covariate values, and
+`ite()` returns the effect per unit:
 
+``` r
+counterfactual(fit, newdata = transform(dat, x = 1))
+ite(fit, treatment_var = "x")
+```
+
+## Models with more regimes
+
+A model with three regimes declares the phases in order, one transition
+per consecutive pair and one outcome model per regime:
+
+``` r
 model <- phase_model(
   phases("susceptible", "infected", "recovered"),
   transition("susceptible", "infected", ~ exposure + age),
@@ -87,25 +196,54 @@ model <- phase_model(
 )
 ```
 
-## Where it applies
-
-Any longitudinal setting with a latent before/after where the chance of crossing over depends on covariates that also shape the outcome: disease onset and recovery, treatment adoption, technology uptake, behavioral change, ecological regime shifts.
-
 ## Documentation
 
-- [Why conditioning on realized change fails](vignettes/estimand-failure.Rmd)
+- [Why Conditioning on Realized Change
+  Fails](vignettes/estimand-failure.Rmd): the before/after estimate and
+  the phaseR estimate against a known effect on simulated data.
+- The help pages document each function, starting with `?phase_model`
+  and `?fit_phaseR`.
+
+## Getting help
+
+Questions and bug reports go to the [GitHub
+issues](https://github.com/gcol33/phaseR/issues). A bug report is
+easiest to act on with a small reproducible example, for instance made
+with [reprex](https://reprex.tidyverse.org/).
+
+## Support
+
+> “Software is like sex: it’s better when it’s free.” — Linus Torvalds
+
+I’m a PhD student who builds R packages in my free time because I
+believe good tools should be free and open. I started these projects for
+my own work and figured others might find them useful too.
+
+If this package saved you some time, buying me a coffee is a nice way to
+say thanks. It helps with my coffee addiction.
+
+[![Buy Me A
+Coffee](https://img.shields.io/badge/-Buy%20me%20a%20coffee-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/gcol33)
 
 ## License
 
-MIT (see the LICENSE file)
+phaseR is licensed under MIT.
 
 ## Citation
 
-```bibtex
-@software{phaseR,
-  title  = {phaseR: Phase-Structured Inference for Longitudinal Change},
-  author = {Colling, Gilles},
-  year   = {2025},
-  url    = {https://github.com/gcol33/phaseR}
+``` text
+Colling G (2026). _phaseR: Phase-Structured Inference for Longitudinal
+Change_. R package version 0.8.0, <https://github.com/gcol33/phaseR>.
+```
+
+BibTeX:
+
+``` bibtex
+@Manual{colling2026phaser,
+  title = {phaseR: Phase-Structured Inference for Longitudinal Change},
+  author = {Gilles Colling},
+  year = {2026},
+  note = {R package version 0.8.0},
+  url = {https://github.com/gcol33/phaseR},
 }
 ```

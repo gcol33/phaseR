@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: If you use this software, please cite it as below.
+type: software
+title: 'phaseR: Phase-Structured Inference for Longitudinal Change'
+version: 0.8.0
+authors:
+- family-names: Colling
+  given-names: Gilles
+license: MIT
+preferred-citation:
+  type: software
+  title: 'phaseR: Phase-Structured Inference for Longitudinal Change'
+  authors:
+  - family-names: Colling
+    given-names: Gilles
+    orcid: https://orcid.org/0000-0003-3070-6066
+  year: 2026
+  url: https://github.com/gcol33/phaseR
+  notes: R package version 0.8.0

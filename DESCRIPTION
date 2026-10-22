@@ -2,7 +2,8 @@ Package: phaseR
 Title: Phase-Structured Inference for Longitudinal Change
 Version: 0.8.0
 Authors@R:
-    person("Gilles", "Colling", , "gilles.colling05@gmail.com", role = c("aut", "cre"))
+    person("Gilles", "Colling", , "gilles.colling051@gmail.com", role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0003-3070-6066"))
 Description: A framework for analysing change in longitudinal data that
     treats "before" and "after" as regimes, not time points. Separates
     regime activation from regime-specific dynamics, preventing

@@ -102,8 +102,10 @@ inline Dual<T> log1p(const Dual<T>& a) {
 }
 
 template <class T>
-inline Dual<T> abs(const Dual<T>& a) {
-  return (value(a) < 0.0) ? -a : a;
+inline Dual<T> sqrt(const Dual<T>& a) {
+  using std::sqrt;
+  T r = sqrt(a.v);
+  return Dual<T>(r, a.d / (2.0 * r));
 }
 
 }  // namespace phaser

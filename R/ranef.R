@@ -72,12 +72,19 @@ summarize_fixef <- function(draws) {
 
 #' Extract random effects
 #'
+#' Posterior summaries of the random-effect coefficients of every level:
+#' the effects themselves for intercept and uncorrelated terms, and
+#' `diag(sigma) L z` for correlated terms.
+#'
 #' @param object A `phase_fit` object
 #' @param component Which component: "transition", "dynamics", or "all" (default)
 #' @param phase For dynamics RE, which phase (ignored for transition)
 #' @param summary If TRUE (default), return posterior summary; if FALSE, return draws
 #'
-#' @return A data frame with random effect estimates
+#' @return With `summary = TRUE`, a data frame with one row per predictor,
+#'   grouping term, level and coefficient and the posterior mean, SD and
+#'   quantiles. With `summary = FALSE`, a named list of arrays of draws
+#'   indexed `[draw, level, coefficient]`, one per predictor and term.
 #' @export
 #'
 #' @examples
@@ -96,92 +103,95 @@ ranef <- function(object, component = c("all", "transition", "dynamics"),
     stop("Object must be a phase_fit", call. = FALSE)
   }
 
-  if (!isTRUE(object$has_re)) {
+  terms <- random_effect_terms(object)
+  if (length(terms) == 0) {
     message("Model has no random effects")
     return(NULL)
   }
+  keep <- vapply(terms, function(t) {
+    (component == "all" || t$component == component) &&
+      (is.null(phase) || t$component != "dynamics" || t$phase %in% phase)
+  }, logical(1))
+  terms <- terms[keep]
+  if (length(terms) == 0) return(NULL)
 
-  results <- list()
-
-  if (component %in% c("all", "transition") && isTRUE(object$has_trans_re)) {
-    re_draws <- extract_re_draws(object, "trans")
-    if (summary) {
-      results$transition <- summarize_re(re_draws, object$trans_re_levels)
-    } else {
-      results$transition <- re_draws
-    }
+  if (!summary) {
+    return(stats::setNames(lapply(terms, function(t) t$coefficients),
+                           vapply(terms, function(t) t$label, character(1))))
   }
-
-  if (component %in% c("all", "dynamics") && isTRUE(object$has_dyn_re)) {
-    phases_to_use <- if (is.null(phase)) object$model$phases$names else phase
-    for (p in phases_to_use) {
-      re_draws <- extract_re_draws(object, paste0("dyn_", p))
-      name <- sprintf("dynamics_%s", p)
-      if (!is.null(re_draws)) {
-        if (summary) {
-          results[[name]] <- summarize_re(re_draws, object$dyn_re_levels[[p]])
-        } else {
-          results[[name]] <- re_draws
-        }
-      }
-    }
-  }
-
-  if (length(results) == 0) {
-    return(NULL)
-  }
-  if (length(results) == 1) {
-    return(results[[1]])
-  }
-  results
-}
-
-
-#' Extract RE draws from fitted model
-#' @keywords internal
-extract_re_draws <- function(fit, type) {
-  # Handle both old naming (u_trans_level) and new naming (u_trans_groupvar_level)
-  # Exclude log_sigma parameters
-  if (grepl("^trans", type)) {
-    pattern <- "^u_trans_[^l]"  # Match u_trans_ but not log_sigma
-  } else if (grepl("^dyn_", type)) {
-    # Extract phase name
-    phase_name <- sub("^dyn_", "", type)
-    pattern <- sprintf("^v_%s_[^l]", phase_name)
-  } else {
-    pattern <- sprintf("^u_%s_|^v_%s_", type, type)
-  }
-
-  idx <- grep(pattern, fit$param_names)
-  # Also exclude log_sigma parameters
-  sigma_idx <- grep("^log_sigma", fit$param_names)
-  idx <- setdiff(idx, sigma_idx)
-
-  if (length(idx) == 0) return(NULL)
-  fit$draws[, idx, drop = FALSE]
-}
-
-
-#' Summarize random effects draws
-#' @keywords internal
-summarize_re <- function(draws, levels) {
-  if (is.null(draws) || ncol(draws) == 0) return(NULL)
-
-  summaries <- t(apply(draws, 2, function(x) {
-    c(mean = mean(x),
-      sd = sd(x),
-      `2.5%` = unname(quantile(x, 0.025)),
-      `50%` = unname(median(x)),
-      `97.5%` = unname(quantile(x, 0.975)))
+  out <- do.call(rbind, lapply(terms, function(t) {
+    b <- t$coefficients
+    cells <- expand.grid(level = dimnames(b)[[2]], coef = dimnames(b)[[3]],
+                         stringsAsFactors = FALSE)
+    values <- matrix(b, nrow = dim(b)[1])
+    data.frame(
+      predictor = t$predictor,
+      term = t$name,
+      cells,
+      summarize_draws(values),
+      row.names = NULL,
+      check.names = FALSE
+    )
   }))
+  out
+}
 
-  if (is.null(levels) || length(levels) != nrow(summaries)) {
-    levels <- paste0("group_", seq_len(nrow(summaries)))
+
+#' Random-effect terms of a fit with their posterior draws
+#'
+#' @param object A `phase_fit` object
+#' @return List with one element per term, in the order of the parameter
+#'   vector: `predictor` (e.g. "transition", "dynamics_active"),
+#'   `component`, `phase`, `name` (grouping factor), `label`,
+#'   `coefficients` (draws `[draw, level, coefficient]`), `sd`
+#'   (`[draw, coefficient]`) and `cor` (`[draw, coefficient, coefficient]`)
+#' @keywords internal
+random_effect_terms <- function(object) {
+  stan_data <- prepare_stan_data(object$model, object$data, prior())
+  target <- posterior_target(stan_data)
+  values <- phaseR_random_effects(target, object$draws)
+  phase_names <- stan_data$phase_names
+  K <- length(phase_names)
+  predictors <- c(
+    lapply(seq_len(K - 1L), function(j) {
+      list(pred = target$transitions[[j]], component = "transition",
+           phase = phase_names[j],
+           predictor = if (K == 2L) "transition" else
+             paste0("transition_", phase_names[j], "_to_", phase_names[j + 1L]))
+    }),
+    lapply(seq_len(K), function(k) {
+      list(pred = target$dynamics[[k]], component = "dynamics",
+           phase = phase_names[k], predictor = paste0("dynamics_", phase_names[k]))
+    })
+  )
+  out <- list()
+  for (p in predictors) {
+    for (term in p$pred$re) {
+      v <- values[[length(out) + 1L]]
+      dimnames(v$coefficients) <- list(NULL, term$levels, term$coef_names)
+      dimnames(v$sd) <- list(NULL, term$coef_names)
+      dimnames(v$cor) <- list(NULL, term$coef_names, term$coef_names)
+      out[[length(out) + 1L]] <- c(
+        list(predictor = p$predictor, component = p$component,
+             phase = p$phase, name = term$name,
+             label = paste0(p$predictor, ":", term$name)),
+        v)
+    }
   }
+  out
+}
 
+
+#' Posterior summaries of the columns of a draws matrix
+#' @keywords internal
+summarize_draws <- function(draws) {
   data.frame(
-    group = levels,
-    summaries,
+    mean = colMeans(draws),
+    sd = apply(draws, 2, stats::sd),
+    `2.5%` = apply(draws, 2, stats::quantile, 0.025),
+    `50%` = apply(draws, 2, stats::median),
+    `97.5%` = apply(draws, 2, stats::quantile, 0.975),
+    check.names = FALSE,
     row.names = NULL
   )
 }
@@ -189,122 +199,34 @@ summarize_re <- function(draws, levels) {
 
 #' Extract variance components
 #'
-#' Returns variance-covariance information for random effects.
-#' For random intercepts, returns the SD. For random slopes,
-#' returns the full covariance matrix (correlated) or diagonal
-#' variances (uncorrelated).
+#' Posterior summaries of the SD of every random-effect coefficient and the
+#' posterior mean of the correlation matrix of each term (the identity for
+#' intercept and uncorrelated terms).
 #'
 #' @param object A `phase_fit` object
 #'
-#' @return A list with variance component estimates by term
+#' @return A list with one element per predictor and term, each with `sd`
+#'   (a data frame with one row per coefficient) and `cor` (a matrix)
 #' @export
-#'
 VarCorr <- function(object) {
 
   if (!inherits(object, "phase_fit")) {
     stop("Object must be a phase_fit", call. = FALSE)
   }
-
-  if (!isTRUE(object$has_re)) {
+  terms <- random_effect_terms(object)
+  if (length(terms) == 0) {
     message("Model has no random effects")
     return(NULL)
   }
-
-  results <- list()
-
-  # Find variance parameters - both log_sigma and L (Cholesky)
-  sigma_idx <- grep("^log_sigma_.*_re", object$param_names)
-  L_idx <- grep("^L_", object$param_names)
-
-  # Process log_sigma parameters (intercept-only or uncorrelated)
-  if (length(sigma_idx) > 0) {
-    draws <- object$draws[, sigma_idx, drop = FALSE]
-    sd_draws <- exp(draws)
-
-    for (i in seq_along(sigma_idx)) {
-      param_name <- object$param_names[sigma_idx[i]]
-      comp_name <- gsub("log_sigma_(.*)_re.*", "\\1", param_name)
-      group_name <- gsub(".*_re_(.*)$", "\\1", param_name)
-      # Check if this is a slope-specific sigma
-      if (grepl("_re_.*_", param_name)) {
-        coef_name <- gsub(".*_re_[^_]+_(.*)$", "\\1", param_name)
-        full_name <- paste(comp_name, group_name, coef_name, sep = "_")
-      } else {
-        full_name <- paste(comp_name, group_name, sep = "_")
-      }
-
-      sd_vec <- sd_draws[, i]
-      results[[full_name]] <- list(
-        type = "sd",
-        sd = mean(sd_vec),
-        sd.sd = sd(sd_vec),
-        `2.5%` = unname(quantile(sd_vec, 0.025)),
-        `97.5%` = unname(quantile(sd_vec, 0.975))
-      )
-    }
-  }
-
-  # Process Cholesky parameters (correlated slopes)
-  if (length(L_idx) > 0) {
-    L_names <- object$param_names[L_idx]
-
-    # Group by term (e.g., L_baseline_re_site_1_1, L_baseline_re_site_2_1, ...)
-    # Extract unique term identifiers
-    term_patterns <- unique(gsub("^(L_[^_]+_re_[^_]+)_.*", "\\1", L_names))
-
-    for (term_pat in term_patterns) {
-      term_L_idx <- grep(paste0("^", term_pat, "_"), object$param_names)
-      n_L <- length(term_L_idx)
-
-      # Determine dimension from number of Cholesky elements
-      # n_L = dim * (dim + 1) / 2, so dim = (-1 + sqrt(1 + 8*n_L)) / 2
-      dim <- as.integer((-1 + sqrt(1 + 8 * n_L)) / 2)
-
-      # Extract L draws and compute covariance: Sigma = L * L'
-      L_draws <- object$draws[, term_L_idx, drop = FALSE]
-      n_samples <- nrow(L_draws)
-
-      # Compute covariance matrix for each sample
-      cov_samples <- array(0, dim = c(dim, dim, n_samples))
-
-      for (s in seq_len(n_samples)) {
-        # Reconstruct L matrix
-        L <- matrix(0, dim, dim)
-        k <- 1
-        for (j in seq_len(dim)) {
-          for (i in j:dim) {
-            L[i, j] <- L_draws[s, k]
-            k <- k + 1
-          }
-        }
-        cov_samples[, , s] <- L %*% t(L)
-      }
-
-      # Compute posterior mean covariance
-      cov_mean <- apply(cov_samples, c(1, 2), mean)
-      cov_sd <- apply(cov_samples, c(1, 2), sd)
-
-      # Compute correlation matrix
-      sds <- sqrt(diag(cov_mean))
-      cor_mean <- cov_mean / outer(sds, sds)
-
-      comp_name <- gsub("^L_([^_]+)_re_.*", "\\1", term_pat)
-      group_name <- gsub("^L_[^_]+_re_(.*)$", "\\1", term_pat)
-      full_name <- paste(comp_name, group_name, sep = "_")
-
-      results[[full_name]] <- list(
-        type = "cov",
-        cov = cov_mean,
-        cov.sd = cov_sd,
-        cor = cor_mean,
-        sd = sds
-      )
-    }
-  }
-
-  if (length(results) == 0) return(NULL)
-
-  structure(results, class = "VarCorr_phaseR")
+  out <- lapply(terms, function(t) {
+    list(
+      sd = data.frame(coef = colnames(t$sd), summarize_draws(t$sd),
+                      check.names = FALSE),
+      cor = apply(t$cor, c(2, 3), mean)
+    )
+  })
+  names(out) <- vapply(terms, function(t) t$label, character(1))
+  structure(out, class = "VarCorr_phaseR")
 }
 
 
@@ -316,24 +238,14 @@ VarCorr <- function(object) {
 #' @return Invisibly returns the input object
 #' @export
 print.VarCorr_phaseR <- function(x, ...) {
-
   for (name in names(x)) {
     cat("Random effect:", name, "\n")
-    item <- x[[name]]
-
-    if (item$type == "sd") {
-      cat(sprintf("  StdDev: %.4f (SE: %.4f)\n", item$sd, item$sd.sd))
-      cat(sprintf("  95%% CI: [%.4f, %.4f]\n", item$`2.5%`, item$`97.5%`))
-    } else if (item$type == "cov") {
-      cat("  StdDevs:\n")
-      for (i in seq_along(item$sd)) {
-        cat(sprintf("    [%d]: %.4f\n", i, item$sd[i]))
-      }
-      cat("  Correlations:\n")
-      print(round(item$cor, 3))
+    print(x[[name]]$sd, digits = 3, row.names = FALSE)
+    if (nrow(x[[name]]$sd) > 1) {
+      cat("  Correlations (posterior mean):\n")
+      print(round(x[[name]]$cor, 3))
     }
     cat("\n")
   }
-
   invisible(x)
 }

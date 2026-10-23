@@ -3,6 +3,7 @@
 
 #include <Rcpp.h>
 #include <vector>
+#include "corr_cholesky.h"
 #include "emission.h"
 #include "phase_process.h"
 #include "prior_functions.h"
@@ -18,8 +19,11 @@ namespace phaser {
 //   kScalar    one coefficient, effects ~ Normal(0, sigma), then log(sigma);
 //   kDiagonal  effects of coefficient j ~ Normal(0, sigma_j), then
 //              log(sigma_1), ..., log(sigma_n);
-//   kCholesky  standardised effects z ~ Normal(0, I) and the lower-triangular
-//              factor L, packed by column, with coefficients L z.
+//   kCholesky  correlated coefficients b = diag(sigma) L z with standardised
+//              effects z ~ Normal(0, I), followed by log(sigma_1), ...,
+//              log(sigma_n) and the n (n - 1) / 2 unconstrained values of
+//              the Cholesky factor L of the correlation matrix
+//              (corr_cholesky.h), which gets the LKJ prior.
 struct RandomEffectTerm {
   enum Kind { kScalar = 0, kDiagonal = 1, kCholesky = 2 };
 
@@ -88,6 +92,14 @@ public:
   };
   void phase_summaries(const double* q, PhaseSummaries& out) const;
 
+  // Per random-effect term, in the order of the predictors: the
+  // coefficients of every level (level-major), the SD of each coefficient
+  // and their correlation matrix (row-major).
+  struct TermValues {
+    std::vector<double> coefficients, sd, cor;
+  };
+  std::vector<TermValues> random_effect_values(const double* q) const;
+
   int n_phases() const { return K_; }
   int n_obs() const { return n_obs_; }
 
@@ -129,21 +141,24 @@ private:
   int n_predictors() const { return static_cast<int>(lp_.size()); }
 
   // Coefficients of the random-effect term: the effects themselves, or
-  // L z for a term with a Cholesky factor.
+  // diag(sigma) L z for a correlated term.
   template <class T>
   void term_coefficients(const RandomEffectTerm& term, const T* q,
                          std::vector<T>& b) const {
+    using std::exp;
     const int n_c = term.n_coefs;
     b.assign(q + term.offset, q + term.offset + term.n_effects());
     if (term.kind != RandomEffectTerm::kCholesky) return;
-    const T* L = q + term.hyper_offset();
+    const T* log_sd = q + term.hyper_offset();
+    CorrFactor<T> cf;
+    corr_factor(log_sd + n_c, n_c, prior_.cor_eta(), false, cf);
     for (int g = 0; g < term.n_groups; g++) {
       const T* z = q + term.offset + g * n_c;
       T* bg = b.data() + g * n_c;
-      for (int i = 0; i < n_c; i++) bg[i] = T(0.0);
-      int l = 0;
-      for (int j = 0; j < n_c; j++) {
-        for (int i = j; i < n_c; i++) bg[i] = bg[i] + L[l++] * z[j];
+      for (int i = 0; i < n_c; i++) {
+        T sum(0.0);
+        for (int j = 0; j <= i; j++) sum = sum + cf.L[i * n_c + j] * z[j];
+        bg[i] = exp(log_sd[i]) * sum;
       }
     }
   }
@@ -153,6 +168,7 @@ private:
   template <class T>
   void term_coefficients_adjoint(const RandomEffectTerm& term, const T* q,
                                  const std::vector<T>& d_b, T* grad) const {
+    using std::exp;
     const int n_c = term.n_coefs;
     if (term.kind != RandomEffectTerm::kCholesky) {
       for (int e = 0; e < term.n_effects(); e++) {
@@ -160,18 +176,31 @@ private:
       }
       return;
     }
-    const T* L = q + term.hyper_offset();
-    T* d_L = grad + term.hyper_offset();
+    const T* log_sd = q + term.hyper_offset();
+    T* d_log_sd = grad + term.hyper_offset();
+    T* d_y = d_log_sd + n_c;
+    const int n_y = n_c * (n_c - 1) / 2;
+    CorrFactor<T> cf;
+    corr_factor(log_sd + n_c, n_c, prior_.cor_eta(), true, cf);
+    std::vector<T> d_L(n_c * n_c, T(0.0));
     for (int g = 0; g < term.n_groups; g++) {
       const T* z = q + term.offset + g * n_c;
       T* d_z = grad + term.offset + g * n_c;
       const T* d_bg = d_b.data() + g * n_c;
-      int l = 0;
-      for (int j = 0; j < n_c; j++) {
-        for (int i = j; i < n_c; i++, l++) {
-          d_z[j] = d_z[j] + L[l] * d_bg[i];
-          d_L[l] = d_L[l] + d_bg[i] * z[j];
+      for (int i = 0; i < n_c; i++) {
+        const T sd = exp(log_sd[i]);
+        T Lz(0.0);
+        for (int j = 0; j <= i; j++) {
+          Lz = Lz + cf.L[i * n_c + j] * z[j];
+          d_z[j] = d_z[j] + sd * cf.L[i * n_c + j] * d_bg[i];
+          d_L[i * n_c + j] = d_L[i * n_c + j] + sd * z[j] * d_bg[i];
         }
+        d_log_sd[i] = d_log_sd[i] + sd * Lz * d_bg[i];
+      }
+    }
+    for (int m = 0; m < n_y; m++) {
+      for (int i = 0; i < n_c * n_c; i++) {
+        d_y[m] = d_y[m] + d_L[i] * cf.dL[m * n_c * n_c + i];
       }
     }
   }
@@ -324,8 +353,6 @@ private:
   // Log prior; adds its gradient into grad unless grad is null.
   template <class T>
   T log_prior(const T* q, T* grad) const {
-    using std::abs;
-    using std::log;
     T lp(0.0), d(0.0), d_sd(0.0);
     auto add = [grad](int i, const T& v) {
       if (grad != nullptr) grad[i] = grad[i] + v;
@@ -351,16 +378,18 @@ private:
             lp = lp + prior::log_normal(q[effects + e], 0.0, 1.0, d);
             add(effects + e, d);
           }
-          // LKJ-type term on the diagonal of the factor and the reflected
-          // random-effect SD prior on each diagonal element.
-          const double eta = prior_.cor_eta();
-          int l = 0;
           for (int j = 0; j < n_c; j++) {
-            const T& L_jj = q[hyper + l];
-            const double power = n_c - j - 1 + 2.0 * (eta - 1.0);
-            lp = lp + power * log(abs(L_jj)) + prior_.re_scale(L_jj, d);
-            add(hyper + l, T(d + power / L_jj));
-            l += n_c - j;
+            lp = lp + prior_.re_sd(q[hyper + j], d);
+            add(hyper + j, d);
+          }
+          CorrFactor<T> cf;
+          corr_factor(q + hyper + n_c, n_c, prior_.cor_eta(), grad != nullptr,
+                      cf);
+          lp = lp + cf.log_density;
+          if (grad != nullptr) {
+            for (int m = 0; m < n_c * (n_c - 1) / 2; m++) {
+              add(hyper + n_c + m, cf.d_log_density[m]);
+            }
           }
         } else {
           for (int e = 0; e < term.n_effects(); e++) {

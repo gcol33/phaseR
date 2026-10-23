@@ -346,13 +346,12 @@ build_re_param_names <- function(component, re_name, re_info,
   if (n_coefs == 1) {
     names <- c(names, paste0("log_sigma_", hyper))
   } else if (re_info$correlated) {
-    # Cholesky lower triangle packed by column, as the likelihood reads it:
-    # L11, L21, ..., Ln1, L22, ..., Ln2, ..., Lnn
-    for (j in seq_len(n_coefs)) {
-      for (i in j:n_coefs) {
-        names <- c(names, paste0("L_", hyper, "_", i, "_", j))
-      }
-    }
+    # SDs, then the unconstrained values of the correlation matrix's
+    # Cholesky factor: atanh of the canonical partial correlation of each
+    # pair (i, j), i > j, row by row
+    pairs <- do.call(rbind, lapply(2:n_coefs, function(i) cbind(i, seq_len(i - 1))))
+    names <- c(names, paste0("log_sigma_", hyper, "_", coef_names),
+               paste0("atanh_cpc_", hyper, "_", pairs[, 1], "_", pairs[, 2]))
   } else {
     names <- c(names, paste0("log_sigma_", hyper, "_", coef_names))
   }

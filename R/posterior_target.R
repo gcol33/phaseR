@@ -46,6 +46,8 @@ posterior_target <- function(stan_data) {
       offset = offset,
       group = as.integer(term$idx) - 1L,
       levels = as.character(term$levels),
+      name = term$group_var,
+      coef_names = c(if (term$has_intercept) "intercept", term$slope_vars),
       Z = term$Z
     )
     offset <<- offset + term$n_groups * term$n_coefs + n_hyper

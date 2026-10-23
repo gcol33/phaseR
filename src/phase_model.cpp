@@ -230,6 +230,39 @@ void PhaseModel::phase_summaries(const double* q, PhaseSummaries& out) const {
   }
 }
 
+std::vector<PhaseModel::TermValues> PhaseModel::random_effect_values(
+    const double* q) const {
+  std::vector<TermValues> out;
+  for (const LinearPredictor& pred : lp_) {
+    for (const RandomEffectTerm& term : pred.re) {
+      const int n_c = term.n_coefs;
+      const double* hyper = q + term.hyper_offset();
+      TermValues v;
+      term_coefficients(term, q, v.coefficients);
+      v.sd.resize(n_c);
+      for (int j = 0; j < n_c; j++) {
+        v.sd[j] = std::exp(hyper[term.kind == RandomEffectTerm::kScalar ? 0 : j]);
+      }
+      v.cor.assign(n_c * n_c, 0.0);
+      if (term.kind == RandomEffectTerm::kCholesky) {
+        CorrFactor<double> cf;
+        corr_factor(hyper + n_c, n_c, prior_.cor_eta(), false, cf);
+        for (int i = 0; i < n_c; i++) {
+          for (int j = 0; j < n_c; j++) {
+            double c = 0.0;
+            for (int k = 0; k < n_c; k++) c += cf.L[i * n_c + k] * cf.L[j * n_c + k];
+            v.cor[i * n_c + j] = c;
+          }
+        }
+      } else {
+        for (int j = 0; j < n_c; j++) v.cor[j * n_c + j] = 1.0;
+      }
+      out.push_back(v);
+    }
+  }
+  return out;
+}
+
 std::vector<int> PhaseModel::random_effect_indices() const {
   std::vector<int> out;
   for (const LinearPredictor& pred : lp_) {

@@ -13,8 +13,8 @@
 #' defined for a phase no unit enters), and each transition by a ridge
 #' logistic regression of "moved" on the transition design matrix over the
 #' observations at risk of that move. Random effects start at zero, with
-#' their SDs (or the diagonal of their Cholesky factor) at the scale of the
-#' random-effect prior.
+#' their SDs at the scale of the random-effect prior and their correlations
+#' at zero.
 #'
 #' The first path splits each unit's observations into `K` consecutive runs
 #' of equal length, so every phase is entered; the others draw the number
@@ -110,14 +110,9 @@ start_from_paths <- function(phase, target) {
   for (pred in c(target$transitions, target$dynamics)) {
     for (term in pred$re) {
       hyper <- term$offset + term$n_groups * term$n_coefs
-      if (term$kind == 2L) {
-        n_c <- term$n_coefs
-        diagonal <- cumsum(c(1L, n_c - seq_len(n_c - 1L) + 1L))
-        theta[hyper + diagonal] <- re_scale
-      } else {
-        theta[hyper + seq_len(if (term$kind == 0L) 1L else term$n_coefs)] <-
-          log(re_scale)
-      }
+      # Log SDs at the prior scale; correlations (kind 2) at zero
+      theta[hyper + seq_len(if (term$kind == 0L) 1L else term$n_coefs)] <-
+        log(re_scale)
     }
   }
   theta

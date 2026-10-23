@@ -1,5 +1,28 @@
 # phaseR (development version)
 
+* Correlated random effects, `(1 + x | group)`, are parameterised by the
+  log SD of each coefficient and the Cholesky factor of their correlation
+  matrix, built from canonical partial correlations (the transform of
+  Lewandowski, Kurowicka and Joe 2009 that Stan uses). The coefficients are
+  `diag(sigma) L z` with standardised effects `z`; the SDs get the
+  random-effect prior (`re ~`) and the correlation matrix exactly the
+  `cor ~ lkj(eta)` prior, Jacobians included. The previous parameterisation,
+  a free lower-triangular factor of the covariance, combined an LKJ-type
+  term on its diagonal with the random-effect prior reflected onto it; that
+  was not the LKJ density of any correlation matrix, and the factor's sign
+  made its posterior bimodal. Parameters are named
+  `log_sigma_<component>_re_<group>_<coef>` and
+  `atanh_cpc_<component>_re_<group>_<i>_<j>`.
+
+* `ranef()` and `VarCorr()` read the random effects from the model
+  description. `ranef()` returns the coefficients of every level
+  (`diag(sigma) L z` for correlated terms, which it returned as the
+  standardised `z`) as one data frame with a row per predictor, term,
+  level and coefficient, and found the levels of dynamics terms by phase
+  name (it looked them up under `phase_0`/`phase_1` and fell back to
+  `group_1`, ...). `VarCorr()` returns for every term the SD of each
+  coefficient and the posterior mean correlation matrix.
+
 * Models with more than two phases take outcome families and random
   effects like two-phase models. `prepare_stan_data()` built them with
   Gaussian dynamics and the fixed part of each formula, dropping

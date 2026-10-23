@@ -151,7 +151,7 @@ test_that("build_re_param_names generates correct names for correlated slopes", 
 
   names <- build_re_param_names("baseline", "site", re_info)
 
-  # Should have: 3 groups * 2 coefs = 6 RE values + 3 Cholesky params
+  # 3 groups * 2 coefs = 6 RE values + 2 log SDs + 1 correlation
   expect_equal(length(names), 9)
 
   # Check RE value names
@@ -159,10 +159,10 @@ test_that("build_re_param_names generates correct names for correlated slopes", 
   expect_true("v_baseline_site_a_x" %in% names)
   expect_true("v_baseline_site_c_x" %in% names)
 
-  # Check Cholesky names
-  expect_true("L_baseline_re_site_1_1" %in% names)
-  expect_true("L_baseline_re_site_2_1" %in% names)
-  expect_true("L_baseline_re_site_2_2" %in% names)
+  # SDs and the correlation
+  expect_true("log_sigma_baseline_re_site_intercept" %in% names)
+  expect_true("log_sigma_baseline_re_site_x" %in% names)
+  expect_true("atanh_cpc_baseline_re_site_2_1" %in% names)
 })
 
 
@@ -290,5 +290,5 @@ test_that("random slopes model fits and produces valid output", {
 
   # Check parameter names include slope components
   expect_true(any(grepl("_intercept", fit$param_names)))
-  expect_true(any(grepl("L_baseline_re_site", fit$param_names)))
+  expect_true(any(grepl("atanh_cpc_baseline_re_site", fit$param_names)))
 })

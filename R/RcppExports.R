@@ -45,3 +45,7 @@ phaseR_phase_summaries <- function(target, draws) {
     .Call(`_phaseR_phaseR_phase_summaries`, target, draws)
 }
 
+phaseR_random_effects <- function(target, draws) {
+    .Call(`_phaseR_phaseR_random_effects`, target, draws)
+}
+

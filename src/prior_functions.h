@@ -104,20 +104,6 @@ T log_prior_positive(const T& log_sigma, int type,
   }
 }
 
-// Positive-parameter prior on a real-valued scale whose sign is not
-// identified (the diagonal of a Cholesky factor): the half distribution
-// reflected to the whole real line, Normal(0, sd) or Cauchy(0, scale).
-template <class T>
-T log_prior_symmetric_scale(const T& x, int type,
-                            const Rcpp::NumericVector& p, T& d) {
-  switch (type) {
-    case 3: return log_normal(x, 0.0, p[0], d);
-    case 4: return log_cauchy(x, 0.0, p[0], d);
-    default:
-      Rcpp::stop("Invalid prior type for positive parameter: %d", type);
-  }
-}
-
 // The prior of each parameter class, as built by prior_to_cpp() in R:
 // regression coefficients (beta), residual SDs (sigma), random-effect SDs
 // (re) and random-effect correlations (cor). SDs are parameterised by their
@@ -151,11 +137,6 @@ public:
   template <class T>
   T re_sd(const T& log_sigma, T& d) const {
     return log_prior_positive(log_sigma, re_type_, re_params_, d);
-  }
-
-  template <class T>
-  T re_scale(const T& x, T& d) const {
-    return log_prior_symmetric_scale(x, re_type_, re_params_, d);
   }
 
   double cor_eta() const { return cor_params_[0]; }

@@ -58,6 +58,18 @@ T log1m_inv_logit(const T& x) {
   return log_inv_logit(T(-x));
 }
 
+// tanh(x) through exp(-2 |x|), without overflow.
+template <class T>
+T tanh_stable(const T& x) {
+  using std::exp;
+  if (value(x) >= 0.0) {
+    T e = exp(-2.0 * x);
+    return (1.0 - e) / (1.0 + e);
+  }
+  T e = exp(2.0 * x);
+  return (e - 1.0) / (e + 1.0);
+}
+
 }  // namespace phaser
 
 #endif

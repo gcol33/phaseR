@@ -28,8 +28,8 @@ to the phase (weight 1) and all others (weight \code{1e-3}, which keeps the fit
 defined for a phase no unit enters), and each transition by a ridge
 logistic regression of "moved" on the transition design matrix over the
 observations at risk of that move. Random effects start at zero, with
-their SDs (or the diagonal of their Cholesky factor) at the scale of the
-random-effect prior.
+their SDs at the scale of the random-effect prior and their correlations
+at zero.
 }
 \details{
 The first path splits each unit's observations into \code{K} consecutive runs

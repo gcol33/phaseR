@@ -182,3 +182,55 @@ List phaseR_phase_summaries(List target, NumericMatrix draws) {
                       Named(names[2]) = out[2], Named(names[3]) = out[3],
                       Named(names[4]) = out[4]);
 }
+
+
+// [[Rcpp::export]]
+List phaseR_random_effects(List target, NumericMatrix draws) {
+  phaser::PhaseModel model(target);
+  if (draws.ncol() != model.dim()) {
+    stop("`draws` has %d columns; the model has %d parameters.",
+         draws.ncol(), model.dim());
+  }
+  const int n_draws = draws.nrow();
+  std::vector<double> q(model.dim());
+  std::vector<NumericVector> coefficients, sd, cor;
+  for (int d = 0; d < n_draws; d++) {
+    for (int i = 0; i < model.dim(); i++) q[i] = draws(d, i);
+    std::vector<phaser::PhaseModel::TermValues> values =
+      model.random_effect_values(q.data());
+    for (std::size_t r = 0; r < values.size(); r++) {
+      const int n_c = static_cast<int>(values[r].sd.size());
+      const int n_g = static_cast<int>(values[r].coefficients.size()) / n_c;
+      if (d == 0) {
+        NumericVector b(static_cast<R_xlen_t>(n_draws) * n_g * n_c);
+        b.attr("dim") = IntegerVector::create(n_draws, n_g, n_c);
+        NumericVector s(static_cast<R_xlen_t>(n_draws) * n_c);
+        s.attr("dim") = IntegerVector::create(n_draws, n_c);
+        NumericVector c(static_cast<R_xlen_t>(n_draws) * n_c * n_c);
+        c.attr("dim") = IntegerVector::create(n_draws, n_c, n_c);
+        coefficients.push_back(b);
+        sd.push_back(s);
+        cor.push_back(c);
+      }
+      for (int g = 0; g < n_g; g++) {
+        for (int j = 0; j < n_c; j++) {
+          coefficients[r][d + static_cast<R_xlen_t>(n_draws) * (g + static_cast<R_xlen_t>(n_g) * j)] =
+            values[r].coefficients[g * n_c + j];
+        }
+      }
+      for (int j = 0; j < n_c; j++) {
+        sd[r][d + static_cast<R_xlen_t>(n_draws) * j] = values[r].sd[j];
+        for (int i = 0; i < n_c; i++) {
+          cor[r][d + static_cast<R_xlen_t>(n_draws) * (i + static_cast<R_xlen_t>(n_c) * j)] =
+            values[r].cor[i * n_c + j];
+        }
+      }
+    }
+  }
+  List out(coefficients.size());
+  for (std::size_t r = 0; r < coefficients.size(); r++) {
+    out[r] = List::create(Named("coefficients") = coefficients[r],
+                          Named("sd") = sd[r], Named("cor") = cor[r]);
+  }
+  return out;
+}

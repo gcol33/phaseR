@@ -10,11 +10,11 @@ VarCorr(object)
 \item{object}{A \code{phase_fit} object}
 }
 \value{
-A list with variance component estimates by term
+A list with one element per predictor and term, each with \code{sd}
+(a data frame with one row per coefficient) and \code{cor} (a matrix)
 }
 \description{
-Returns variance-covariance information for random effects.
-For random intercepts, returns the SD. For random slopes,
-returns the full covariance matrix (correlated) or diagonal
-variances (uncorrelated).
+Posterior summaries of the SD of every random-effect coefficient and the
+posterior mean of the correlation matrix of each term (the identity for
+intercept and uncorrelated terms).
 }

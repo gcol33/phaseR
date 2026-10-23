@@ -28,7 +28,9 @@ pak::pak("gcol33/phaseR")
 A common analytical pattern in longitudinal data is to:
 
 1. Observe when a unit "changes" (e.g., onset of disease, adoption of treatment)
+
 2. Compare outcomes before vs. after the change
+
 3. Attribute the difference to the "effect" of the change
 
 **This is not a valid estimand.** The key insight of phaseR is:
@@ -45,6 +47,7 @@ $$P(\text{transition} | x) = \text{logit}^{-1}(\beta_0 + \beta_1 x)$$
 And outcomes depend on phase and $x$:
 
 - Inactive: $y \sim N(\mu_0 + \gamma_0 x, \sigma_0^2)$
+
 - Active: $y \sim N(\mu_1 + \gamma_1 x, \sigma_1^2)$
 
 The problem: **which units we observe in each phase is not random**. Units with
@@ -189,6 +192,7 @@ cat("Bias:", round(phaser_effect - (-2), 2), "\n")
 The naive before-after approach is unbiased only when:
 
 - Transition probability is independent of all variables that affect outcomes
+
 - Or, all such variables are perfectly controlled for
 
 In practice, this is rarely satisfied. phaseR provides a principled alternative

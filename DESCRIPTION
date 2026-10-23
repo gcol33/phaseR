@@ -11,6 +11,8 @@ Description: A framework for analysing change in longitudinal data that
     inference. Applicable to ecology, epidemiology, economics, psychology,
     medicine, and any field with latent phase transitions.
 License: MIT + file LICENSE
+URL: https://gillescolling.com/phaseR/, https://github.com/gcol33/phaseR
+BugReports: https://github.com/gcol33/phaseR/issues
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3

@@ -47,9 +47,10 @@ your question. phaseR supports:
 
 The default backend is the No-U-Turn sampler (NUTS), an adaptive
 Hamiltonian Monte Carlo method, written in C++ with Rcpp, so no Stan,
-JAGS or other inference engine has to be installed. [Why Conditioning on Realized Change
-Fails](vignettes/estimand-failure.Rmd) runs the before/after estimate
-and the phaseR estimate against a known truth on simulated data.
+JAGS or other inference engine has to be installed. [Why Conditioning on
+Realized Change Fails](vignettes/estimand-failure.Rmd) runs the
+before/after estimate and the phaseR estimate against a known truth on
+simulated data.
 
 ## Installation
 
@@ -111,24 +112,24 @@ summary(fit)
 #> Phases: inactive -> active
 #> 
 #> Transition coefficients:
-#>                         mean   sd  2.5% median 97.5% Rhat ESS
-#> beta_trans_(Intercept) -0.92 0.24 -1.39  -0.92 -0.47   NA 995
-#> beta_trans_x            0.42 0.25 -0.08   0.42  0.90   NA 858
+#>                         mean   sd  2.5% median 97.5% Rhat    ESS
+#> beta_trans_(Intercept) -0.92 0.24 -1.39  -0.92 -0.47   NA 996.64
+#> beta_trans_x            0.42 0.25 -0.08   0.42  0.90   NA 862.56
 #> 
 #> Dynamics coefficients (inactive):
-#>                           mean   sd  2.5% median 97.5% Rhat  ESS
-#> beta_inactive_(Intercept) 9.88 0.08  9.72   9.88 10.03   NA  929
-#> beta_inactive_x           0.06 0.07 -0.07   0.06  0.19   NA 1000
+#>                           mean   sd  2.5% median 97.5% Rhat    ESS
+#> beta_inactive_(Intercept) 9.88 0.08  9.72   9.88 10.03   NA 979.03
+#> beta_inactive_x           0.06 0.07 -0.07   0.06  0.19   NA 993.48
 #> 
 #> Dynamics coefficients (active):
-#>                          mean   sd  2.5% median 97.5% Rhat ESS
-#> beta_active_(Intercept)  7.95 0.15  7.65   7.96  8.24   NA 836
-#> beta_active_x           -0.47 0.13 -0.72  -0.47 -0.22   NA 961
+#>                          mean   sd  2.5% median 97.5% Rhat    ESS
+#> beta_active_(Intercept)  7.95 0.15  7.65   7.96  8.24   NA 888.67
+#> beta_active_x           -0.47 0.13 -0.72  -0.47 -0.22   NA 900.03
 #> 
 #> Variance parameters:
-#>                    mean   sd  2.5% median 97.5% Rhat  ESS
-#> log_sigma_inactive 0.04 0.05 -0.05   0.04  0.14   NA  942
-#> log_sigma_active   0.41 0.06  0.30   0.40  0.52   NA 1000
+#>                    mean   sd  2.5% median 97.5% Rhat     ESS
+#> log_sigma_inactive 0.04 0.05 -0.05   0.04  0.14   NA  944.09
+#> log_sigma_active   0.41 0.06  0.30   0.40  0.52   NA 1082.53
 ```
 
 `backend = "laplace"` approximates the posterior by a Gaussian at its
@@ -199,8 +200,9 @@ model <- phase_model(
 ## Documentation
 
 - [Why Conditioning on Realized Change
-  Fails](vignettes/estimand-failure.Rmd): the before/after estimate and
-  the phaseR estimate against a known effect on simulated data.
+  Fails](https://gillescolling.com/phaseR/articles/estimand-failure.html):
+  the before/after estimate and the phaseR estimate against a known
+  effect on simulated data.
 - The help pages document each function, starting with `?phase_model`
   and `?fit_phaseR`.
 
@@ -247,3 +249,7 @@ BibTeX:
   url = {https://github.com/gcol33/phaseR},
 }
 ```
+
+Download the citation as
+[BibTeX](https://gillescolling.com/phaseR/phaseR.bib) or
+[RIS](https://gillescolling.com/phaseR/phaseR.ris).

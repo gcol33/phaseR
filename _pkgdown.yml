@@ -1,0 +1,45 @@
+url: https://gillescolling.com/phaseR
+template:
+  bootstrap: 5
+  bootswatch: sandstone
+  light-switch: yes
+  includes:
+    in_header: |
+      <script>
+      (function () {
+        var D = String.fromCharCode(36);
+        window.MathJax = {
+          tex: {
+            inlineMath: [[D, D], ["\\(", "\\)"]],
+            displayMath: [[D + D, D + D], ["\\[", "\\]"]]
+          },
+          chtml: { linebreaks: { automatic: true, width: "90% container" } },
+          svg: { linebreaks: { automatic: true, width: "90% container" } },
+          options: { renderActions: { addMenu: [] } }
+        };
+      })();
+      </script>
+figures:
+  dev: svg
+  fig.ext: svg
+  bg: '#F5F6F8'
+navbar:
+  structure:
+    left:
+    - reference
+    - articles
+    - news
+    right:
+    - search
+    - lightswitch
+    - github
+home:
+  sidebar:
+    structure: [source, license, citation, authors, dev]
+    components:
+      source:
+        title: Links
+        text: |
+          [Browse source code](https://github.com/gcol33/phaseR/)
+
+          [Report a bug](https://github.com/gcol33/phaseR/issues)

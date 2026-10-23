@@ -125,7 +125,7 @@ model <- phase_model(
 
 ## Documentation
 
-- [Why Conditioning on Realized Change Fails](vignettes/estimand-failure.Rmd): the before/after estimate and the phaseR estimate against a known effect on simulated data.
+- [Why Conditioning on Realized Change Fails](https://gillescolling.com/phaseR/articles/estimand-failure.html): the before/after estimate and the phaseR estimate against a known effect on simulated data.
 - The help pages document each function, starting with `?phase_model` and `?fit_phaseR`.
 
 ## Getting help
@@ -156,3 +156,5 @@ fence("text", format(cit, style = "text"))
 cat("BibTeX:\n\n")
 fence("bibtex", format(cit, style = "bibtex"))
 ```
+
+Download the citation as [BibTeX](https://gillescolling.com/phaseR/phaseR.bib) or [RIS](https://gillescolling.com/phaseR/phaseR.ris).

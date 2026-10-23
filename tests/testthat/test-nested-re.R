@@ -156,9 +156,9 @@ test_that("model with nested RE in dynamics compiles", {
 
   # Check nested structure is created
   stan_data <- phaseR:::prepare_stan_data(model, data)
-  expect_equal(stan_data$dyn_re_multi_0$n_re_terms, 2)
-  expect_true("site" %in% names(stan_data$dyn_re_multi_0$re_list))
-  expect_true("site:plot" %in% names(stan_data$dyn_re_multi_0$re_list))
+  expect_equal(stan_data$re_dyn[[1]]$n_re_terms, 2)
+  expect_true("site" %in% names(stan_data$re_dyn[[1]]$re_list))
+  expect_true("site:plot" %in% names(stan_data$re_dyn[[1]]$re_list))
 })
 
 

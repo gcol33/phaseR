@@ -31,8 +31,8 @@ test_that("prepare_stan_data detects Poisson family", {
   stan_data <- prepare_stan_data(model, dat)
 
   expect_true(stan_data$is_glm)
-  expect_equal(stan_data$family_0, 1L)
-  expect_equal(stan_data$family_1, 1L)
+  expect_equal(stan_data$family[1], 1L)
+  expect_equal(stan_data$family[2], 1L)
 })
 
 
@@ -50,8 +50,8 @@ test_that("prepare_stan_data handles mixed families", {
   stan_data <- prepare_stan_data(model, dat)
 
   expect_false(stan_data$is_glm)
-  expect_equal(stan_data$family_0, 0L)
-  expect_equal(stan_data$family_1, 0L)
+  expect_equal(stan_data$family[1], 0L)
+  expect_equal(stan_data$family[2], 0L)
 })
 
 

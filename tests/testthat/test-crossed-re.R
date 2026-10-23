@@ -95,7 +95,7 @@ test_that("model with crossed RE in dynamics compiles", {
 
   # Check multi-RE structure is created
   stan_data <- phaseR:::prepare_stan_data(model, data)
-  expect_equal(stan_data$dyn_re_multi_0$n_re_terms, 2)
+  expect_equal(stan_data$re_dyn[[1]]$n_re_terms, 2)
 })
 
 

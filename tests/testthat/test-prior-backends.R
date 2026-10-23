@@ -35,12 +35,8 @@ prior_target_cases <- function() {
 
 # Coefficients and log residual SDs lead every parameter vector.
 fixed_block_sizes <- function(stan_data) {
-  if (stan_data$k_phases > 2) {
-    return(c(beta = sum(stan_data$n_trans_coef) + sum(stan_data$n_dyn_coef),
-             sigma = stan_data$k_phases))
-  }
-  c(beta = stan_data$n_trans_coef + stan_data$n_dyn_coef_0 +
-      stan_data$n_dyn_coef_1, sigma = 2)
+  c(beta = sum(stan_data$n_trans_coef) + sum(stan_data$n_dyn_coef),
+    sigma = stan_data$k_phases)
 }
 
 test_that("every model family evaluates the prior it is given", {

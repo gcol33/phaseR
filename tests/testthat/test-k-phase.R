@@ -126,3 +126,40 @@ test_that("k-phase param names are correctly structured", {
   expect_true("log_sigma_mid" %in% stan_data$param_names)
   expect_true("log_sigma_late" %in% stan_data$param_names)
 })
+
+test_that("models with more than two phases take families and random effects", {
+  case <- gradient_cases()$cases$k_phase_glm_re
+  stan_data <- phaseR:::prepare_stan_data(case$model, reference_data(), prior())
+  expect_equal(stan_data$family, c(1L, 1L, 0L))
+  expect_true(stan_data$has_trans_re && stan_data$has_dyn_re)
+  expect_true(any(grepl("^u_trans_A_to_B_site_", stan_data$param_names)))
+  expect_true("log_sigma_trans_A_to_B_re_site" %in% stan_data$param_names)
+  expect_true(any(grepl("^v_B_region_", stan_data$param_names)))
+})
+
+test_that("dynamics are matched to phases by name", {
+  dat <- reference_data()
+  in_order <- reference_two_phase(~ x, y ~ x, y ~ 1)
+  reversed <- phase_model(
+    phases("inactive", "active"),
+    transition("inactive", "active", ~ x),
+    dynamics("active", y ~ 1),
+    dynamics("inactive", y ~ x)
+  )
+  sd_a <- phaseR:::prepare_stan_data(in_order, dat, prior())
+  sd_b <- phaseR:::prepare_stan_data(reversed, dat, prior())
+  expect_identical(sd_a$param_names, sd_b$param_names)
+  theta <- seq(-0.5, 0.5, length.out = sd_a$n_params)
+  expect_equal(phaseR:::log_posterior(phaseR:::posterior_target(sd_a), theta),
+               phaseR:::log_posterior(phaseR:::posterior_target(sd_b), theta))
+})
+
+test_that("a transition that skips a phase is rejected", {
+  model <- phase_model(
+    phases("A", "B", "C"),
+    transition("A", "C", ~ 1),
+    dynamics("A", y ~ 1), dynamics("B", y ~ 1), dynamics("C", y ~ 1)
+  )
+  expect_error(phaseR:::prepare_stan_data(model, reference_data(), prior()),
+               "skips a phase")
+})

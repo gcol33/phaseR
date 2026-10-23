@@ -93,16 +93,20 @@ reference_target <- function(case, dat = reference_data()) {
   phaseR:::posterior_target(stan_data)
 }
 
-# Central differences with one Richardson extrapolation step: the error is
-# O(h^4) in the step and O(eps |f| / h) in rounding.
-richardson_gradient <- function(f, x, h = 1e-4) {
+# Central differences with `levels` Richardson extrapolation steps: the
+# error is O(h^(2 levels + 2)) in the step and O(eps |f| / h) in rounding.
+richardson_gradient <- function(f, x, h = 1e-4, levels = 1) {
   vapply(seq_along(x), function(i) {
     step <- h * max(1, abs(x[i]))
     central <- function(s) {
       e <- replace(numeric(length(x)), i, s)
       (f(x + e) - f(x - e)) / (2 * s)
     }
-    (4 * central(step / 2) - central(step)) / 3
+    d <- vapply(0:levels, function(m) central(step / 2^m), numeric(1))
+    for (m in seq_len(levels)) {
+      d <- (4^m * d[-1] - d[-length(d)]) / (4^m - 1)
+    }
+    d
   }, numeric(1))
 }
 
@@ -123,6 +127,16 @@ gradient_cases <- function() {
   cases$binomial_re <- list(
     model = reference_two_phase(~ x, bin ~ x + (1 | site), bin ~ 1,
                                 family_0 = binomial()),
+    prior = prior())
+  cases$k_phase_glm_re <- list(
+    model = phase_model(
+      phases("A", "B", "C"),
+      transition("A", "B", ~ x + (1 | site)),
+      transition("B", "C", ~ 1),
+      dynamics("A", count ~ x, family = poisson()),
+      dynamics("B", count ~ 1 + (1 | region), family = poisson()),
+      dynamics("C", count ~ x)
+    ),
     prior = prior())
   list(dat = dat, cases = cases)
 }

@@ -6,7 +6,30 @@
 \usage{
 prepare_stan_data(model, data, prior = NULL)
 }
+\arguments{
+\item{model}{A \code{phase_model}}
+
+\item{data}{Data frame}
+
+\item{prior}{Prior specification from \code{\link[=prior]{prior()}}}
+}
+\value{
+List with the outcome, the unit ranges, the design matrices
+(\code{X_trans_list}, \code{X_dyn_list}), the random-effect structures
+(\code{re_trans}, \code{re_dyn}, from \code{\link[=build_multi_re]{build_multi_re()}}), the family code of each
+phase, the parameter count and names, and the prior in C++ form
+}
 \description{
-Prepare data for C++ likelihood
+Builds the design of a phase model with \code{K} phases: one transition
+linear predictor per consecutive pair of phases (from the \code{transition()}
+between them, intercept-only if there is none) and one dynamics linear
+predictor per phase (from its \code{dynamics()}, an intercept-only Gaussian
+model of the response if there is none). Each may contain random-effect
+terms, and each phase has its own outcome family.
+}
+\details{
+The parameter vector holds the transition coefficients, the dynamics
+coefficients and the log residual SD of each phase, followed by the
+random-effect parameters of each predictor in the same order.
 }
 \keyword{internal}

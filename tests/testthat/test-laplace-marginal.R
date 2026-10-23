@@ -19,7 +19,7 @@ test_that("the Laplace marginal gradient matches finite differences", {
       rnorm(length(lap$layout$theta), 0, 0.05)
     exact <- phaseR:::phaseR_laplace_objective(lap$laplace, theta)
     expect_true(exact$converged, info = name)
-    numeric <- richardson_gradient(lap$value, theta, h = 1e-2)
+    numeric <- richardson_gradient(lap$value, theta, h = 1e-2, levels = 2)
     rel_error <- max(abs(exact$gradient - numeric)) / max(1, abs(numeric))
     expect_lt(rel_error, 1e-6, label = name)
   }

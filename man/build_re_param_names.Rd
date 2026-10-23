@@ -4,14 +4,23 @@
 \alias{build_re_param_names}
 \title{Build RE parameter names}
 \usage{
-build_re_param_names(component, re_name, re_info)
+build_re_param_names(
+  component,
+  re_name,
+  re_info,
+  transition = component == "trans"
+)
 }
 \arguments{
-\item{component}{Component name (e.g., "trans", "baseline")}
+\item{component}{Label of the linear predictor (e.g. "trans", a phase
+name)}
 
 \item{re_name}{Name of grouping variable}
 
 \item{re_info}{RE info structure from build_multi_re}
+
+\item{transition}{Whether the term belongs to a transition predictor
+(effects named \code{u_...}) or a dynamics predictor (\code{v_...})}
 }
 \value{
 Character vector of parameter names

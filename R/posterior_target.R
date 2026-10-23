@@ -20,18 +20,10 @@
 posterior_target <- function(stan_data) {
 
   k <- stan_data$k_phases
-  if (k > 2) {
-    X_trans <- stan_data$X_trans_list
-    X_dyn <- stan_data$X_dyn_list
-    family <- rep(0L, k)
-    re <- rep(list(NULL), 2L * k - 1L)
-  } else {
-    X_trans <- list(stan_data$X_trans)
-    X_dyn <- list(stan_data$X_dyn_0, stan_data$X_dyn_1)
-    family <- c(stan_data$family_0, stan_data$family_1)
-    re <- list(stan_data$trans_re_multi, stan_data$dyn_re_multi_0,
-               stan_data$dyn_re_multi_1)
-  }
+  X_trans <- stan_data$X_trans_list
+  X_dyn <- stan_data$X_dyn_list
+  family <- stan_data$family
+  re <- c(stan_data$re_trans, stan_data$re_dyn)
 
   offset <- 0L
   predictor <- function(X) {
@@ -60,7 +52,7 @@ posterior_target <- function(stan_data) {
     out
   }
   for (c in seq_along(predictors)) {
-    if (!is.null(re[[c]]) && re[[c]]$n_re_terms > 0) {
+    if (re[[c]]$n_re_terms > 0) {
       predictors[[c]]$re <- lapply(unname(re[[c]]$re_list), re_term)
     }
   }

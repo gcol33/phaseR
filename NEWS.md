@@ -1,5 +1,15 @@
 # phaseR (development version)
 
+* Models with more than two phases take outcome families and random
+  effects like two-phase models. `prepare_stan_data()` built them with
+  Gaussian dynamics and the fixed part of each formula, dropping
+  `family` and every random-effect term without a message. One data
+  preparation now serves every number of phases; it matches each
+  `dynamics()` and `transition()` to its phases by name (a two-phase model
+  read its dynamics in the order given), uses an intercept-only Gaussian
+  model for a phase without `dynamics()`, and rejects a transition that
+  skips a phase, which the left-to-right phase process cannot represent.
+
 * Predictions, counterfactuals and treatment effects are computed by the
   model both backends fit (`src/phase_model.h`) instead of R copies of the
   two-phase Gaussian recursion, so they cover every model: k phases,

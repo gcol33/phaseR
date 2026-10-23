@@ -218,8 +218,8 @@ test_that("model with random slopes in dynamics compiles", {
   # Check slope structure is created
   stan_data <- phaseR:::prepare_stan_data(model, data)
   expect_true(stan_data$has_slopes)
-  expect_true(stan_data$dyn_re_multi_0$has_slopes)
-  expect_equal(stan_data$dyn_re_multi_0$re_list$site$n_coefs, 2)
+  expect_true(stan_data$re_dyn[[1]]$has_slopes)
+  expect_equal(stan_data$re_dyn[[1]]$re_list$site$n_coefs, 2)
 })
 
 
@@ -248,7 +248,7 @@ test_that("model with uncorrelated random slopes compiles", {
 
   stan_data <- phaseR:::prepare_stan_data(model, data)
   expect_true(stan_data$has_slopes)
-  expect_false(stan_data$dyn_re_multi_0$re_list$site$correlated)
+  expect_false(stan_data$re_dyn[[1]]$re_list$site$correlated)
 })
 
 

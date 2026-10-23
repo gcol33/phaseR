@@ -164,24 +164,24 @@
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Transition coefficients:</span></span>
 <span><span class="co">#&gt;                         mean   sd  2.5% median 97.5% Rhat    ESS</span></span>
-<span><span class="co">#&gt; beta_trans_(Intercept) -0.92 0.24 -1.39  -0.92 -0.47   NA 996.64</span></span>
-<span><span class="co">#&gt; beta_trans_x            0.42 0.25 -0.08   0.42  0.90   NA 862.56</span></span>
+<span><span class="co">#&gt; beta_trans_(Intercept) -0.92 0.23 -1.39  -0.92 -0.49   NA 878.85</span></span>
+<span><span class="co">#&gt; beta_trans_x            0.42 0.25 -0.05   0.42  0.93   NA 818.19</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Dynamics coefficients (inactive):</span></span>
-<span><span class="co">#&gt;                           mean   sd  2.5% median 97.5% Rhat    ESS</span></span>
-<span><span class="co">#&gt; beta_inactive_(Intercept) 9.88 0.08  9.72   9.88 10.03   NA 979.03</span></span>
-<span><span class="co">#&gt; beta_inactive_x           0.06 0.07 -0.07   0.06  0.19   NA 993.48</span></span>
+<span><span class="co">#&gt;                           mean   sd  2.5% median 97.5% Rhat     ESS</span></span>
+<span><span class="co">#&gt; beta_inactive_(Intercept) 9.88 0.08  9.72   9.88 10.03   NA  986.47</span></span>
+<span><span class="co">#&gt; beta_inactive_x           0.06 0.07 -0.06   0.06  0.19   NA 1053.52</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Dynamics coefficients (active):</span></span>
 <span><span class="co">#&gt;                          mean   sd  2.5% median 97.5% Rhat    ESS</span></span>
-<span><span class="co">#&gt; beta_active_(Intercept)  7.95 0.15  7.65   7.96  8.24   NA 888.67</span></span>
-<span><span class="co">#&gt; beta_active_x           -0.47 0.13 -0.72  -0.47 -0.22   NA 900.03</span></span>
+<span><span class="co">#&gt; beta_active_(Intercept)  7.95 0.15  7.65   7.96  8.24   NA 966.92</span></span>
+<span><span class="co">#&gt; beta_active_x           -0.47 0.13 -0.71  -0.47 -0.22   NA 986.75</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Variance parameters:</span></span>
 <span><span class="co">#&gt;                    mean   sd  2.5% median 97.5% Rhat     ESS</span></span>
-<span><span class="co">#&gt; log_sigma_inactive 0.04 0.05 -0.05   0.04  0.14   NA  944.09</span></span>
-<span><span class="co">#&gt; log_sigma_active   0.41 0.06  0.30   0.40  0.52   NA 1082.53</span></span></code></pre></div>
-<p><code>backend = "laplace"</code> approximates the posterior by a Gaussian at its mode and returns within a second. The default backend, <code>"hmc"</code>, samples the posterior with the No-U-Turn sampler, and <code>chains</code> and <code>iter</code> set the number of chains and the iterations per chain:</p>
+<span><span class="co">#&gt; log_sigma_inactive 0.04 0.05 -0.05   0.04  0.14   NA  865.83</span></span>
+<span><span class="co">#&gt; log_sigma_active   0.41 0.06  0.30   0.40  0.52   NA 1025.50</span></span></code></pre></div>
+<p><code>backend = "laplace"</code> approximates the posterior by a Gaussian at its mode, with any random effects integrated out first, and returns within a second. The default backend, <code>"hmc"</code>, samples the posterior with the No-U-Turn sampler, and <code>chains</code> and <code>iter</code> set the number of chains and the iterations per chain:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/fit_phaseR.html">fit_phaseR</a></span><span class="op">(</span><span class="va">model</span>, data <span class="op">=</span> <span class="va">dat</span>, chains <span class="op">=</span> <span class="fl">2</span>, iter <span class="op">=</span> <span class="fl">1000</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span></span></code></pre></div>
 </div>
@@ -198,10 +198,10 @@
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">effect</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/ate.html">ate</a></span><span class="op">(</span><span class="va">fit</span>, treatment_var <span class="op">=</span> <span class="st">"x"</span><span class="op">)</span></span>
 <span><span class="va">effect</span><span class="op">$</span><span class="va">ate</span></span>
-<span><span class="co">#&gt; [1] -0.3821998</span></span>
+<span><span class="co">#&gt; [1] -0.3790779</span></span>
 <span><span class="va">effect</span><span class="op">$</span><span class="va">ate_ci</span></span>
-<span><span class="co">#&gt;        2.5%       97.5% </span></span>
-<span><span class="co">#&gt; -0.71036013 -0.06097235</span></span></code></pre></div>
+<span><span class="co">#&gt;       2.5%      97.5% </span></span>
+<span><span class="co">#&gt; -0.7154333 -0.0678609</span></span></code></pre></div>
 <p><code><a href="reference/counterfactual.html">counterfactual()</a></code> predicts outcomes for new covariate values, and <code><a href="reference/ite.html">ite()</a></code> returns the effect per unit:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="reference/counterfactual.html">counterfactual</a></span><span class="op">(</span><span class="va">fit</span>, newdata <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/transform.html" class="external-link">transform</a></span><span class="op">(</span><span class="va">dat</span>, x <span class="op">=</span> <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span>

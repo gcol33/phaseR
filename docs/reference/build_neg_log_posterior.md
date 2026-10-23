@@ -1,8 +1,7 @@
 # Build negative log posterior function for optimization
 
-Creates a function that computes -log p(theta \| y) for use with
-optim(), from the same model description and prior the NUTS backend
-samples.
+Creates -log p(theta \| y) and its exact gradient for use with optim(),
+from the same model description and prior the NUTS backend samples.
 
 ## Usage
 
@@ -18,4 +17,5 @@ build_neg_log_posterior(stan_data)
 
 ## Value
 
-Function of parameter vector returning negative log posterior
+List of two functions of the parameter vector: `fn`, the negative log
+posterior, and `gr`, its gradient

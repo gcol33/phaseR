@@ -1,13 +1,27 @@
 # Laplace approximation backend for phase models
 
-Fast approximate inference using the Laplace approximation. Finds the
-posterior mode and approximates the posterior as Gaussian with
-covariance equal to the inverse Hessian.
+Approximates the posterior by a Gaussian at its mode. In a model with
+random effects the effects u are integrated out first: for the other
+parameters theta (coefficients, log SDs, Cholesky factors) the marginal
+posterior is approximated by the Laplace formula
+`p(theta | y) ~ p(theta, u*(theta) | y) (2 pi)^(n_u / 2) det(A)^(-1/2)`,
+with `u*(theta)` the mode of the effects given theta and `A` the
+negative Hessian of the log posterior in u there (Tierney and Kadane
+1986; the approach of INLA and TMB). The joint mode of (theta, u) does
+not exist: as a random-effect SD shrinks with its effects at zero, the
+Normal density of the effects grows without bound, faster than any
+proper SD prior falls. The marginal posterior of theta is bounded, so
+its mode is well defined. theta is drawn from the Gaussian at that mode,
+with covariance the inverse negative Hessian of the log marginal
+(central differences of its exact gradient), and u given theta from
+`u*(theta_hat) + du*/dtheta (theta - theta_hat) + N(0, A^-1)`. In a
+model without random effects this is the Gaussian approximation at the
+joint mode.
 
 ## Usage
 
 ``` r
-fit_laplace(stan_data, n_samples = 1000, seed, ...)
+fit_laplace(stan_data, n_samples = 1000, seed, n_starts = 5L, ...)
 ```
 
 ## Arguments
@@ -22,7 +36,12 @@ fit_laplace(stan_data, n_samples = 1000, seed, ...)
 
 - seed:
 
-  Integer seed for the draws from the Gaussian approximation
+  Integer seed for the random starting points and the draws from the
+  Gaussian approximation
+
+- n_starts:
+
+  Number of starting points of the mode search
 
 - ...:
 
@@ -31,3 +50,12 @@ fit_laplace(stan_data, n_samples = 1000, seed, ...)
 ## Value
 
 Raw fit object with same structure as HMC backend
+
+## Details
+
+The log posterior of a phase model is multimodal: a mode in which a
+phase is never entered leaves that phase's parameters at their prior.
+The mode is therefore searched from `n_starts` starting points built
+from provisional phase assignments
+([`initial_values()`](https://gillescolling.com/phaseR/reference/initial_values.md)),
+and the start reaching the highest log marginal posterior is kept.

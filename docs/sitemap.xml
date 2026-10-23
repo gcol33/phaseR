@@ -41,10 +41,13 @@
 <url><loc>https://gillescolling.com/phaseR/reference/half_cauchy.html</loc></url>
 <url><loc>https://gillescolling.com/phaseR/reference/half_normal.html</loc></url>
 <url><loc>https://gillescolling.com/phaseR/reference/index.html</loc></url>
+<url><loc>https://gillescolling.com/phaseR/reference/initial_values.html</loc></url>
 <url><loc>https://gillescolling.com/phaseR/reference/is_default_prior.html</loc></url>
 <url><loc>https://gillescolling.com/phaseR/reference/ite.html</loc></url>
+<url><loc>https://gillescolling.com/phaseR/reference/laplace_objective.html</loc></url>
 <url><loc>https://gillescolling.com/phaseR/reference/lkj.html</loc></url>
 <url><loc>https://gillescolling.com/phaseR/reference/logLik.phase_fit.html</loc></url>
+<url><loc>https://gillescolling.com/phaseR/reference/log_posterior.html</loc></url>
 <url><loc>https://gillescolling.com/phaseR/reference/log_sum_exp.html</loc></url>
 <url><loc>https://gillescolling.com/phaseR/reference/loo.html</loc></url>
 <url><loc>https://gillescolling.com/phaseR/reference/loo_compare.html</loc></url>
@@ -57,6 +60,7 @@
 <url><loc>https://gillescolling.com/phaseR/reference/phaseR-package.html</loc></url>
 <url><loc>https://gillescolling.com/phaseR/reference/phases.html</loc></url>
 <url><loc>https://gillescolling.com/phaseR/reference/phase_model.html</loc></url>
+<url><loc>https://gillescolling.com/phaseR/reference/phase_paths.html</loc></url>
 <url><loc>https://gillescolling.com/phaseR/reference/plot_base_diagnostics.html</loc></url>
 <url><loc>https://gillescolling.com/phaseR/reference/posterior_predict.html</loc></url>
 <url><loc>https://gillescolling.com/phaseR/reference/posterior_target.html</loc></url>
@@ -75,12 +79,14 @@
 <url><loc>https://gillescolling.com/phaseR/reference/ranef.html</loc></url>
 <url><loc>https://gillescolling.com/phaseR/reference/residuals.phase_fit.html</loc></url>
 <url><loc>https://gillescolling.com/phaseR/reference/resolve_seed.html</loc></url>
+<url><loc>https://gillescolling.com/phaseR/reference/ridge_glm.html</loc></url>
 <url><loc>https://gillescolling.com/phaseR/reference/sample_mvnorm.html</loc></url>
 <url><loc>https://gillescolling.com/phaseR/reference/sim_phaseR.html</loc></url>
 <url><loc>https://gillescolling.com/phaseR/reference/sim_phaseR_binomial.html</loc></url>
 <url><loc>https://gillescolling.com/phaseR/reference/sim_phaseR_k.html</loc></url>
 <url><loc>https://gillescolling.com/phaseR/reference/sim_phaseR_poisson.html</loc></url>
 <url><loc>https://gillescolling.com/phaseR/reference/smooth_pareto_tail.html</loc></url>
+<url><loc>https://gillescolling.com/phaseR/reference/start_from_paths.html</loc></url>
 <url><loc>https://gillescolling.com/phaseR/reference/student_t.html</loc></url>
 <url><loc>https://gillescolling.com/phaseR/reference/summarize_fixef.html</loc></url>
 <url><loc>https://gillescolling.com/phaseR/reference/summarize_predictions.html</loc></url>
@@ -92,5 +98,6 @@
 <url><loc>https://gillescolling.com/phaseR/reference/validate_prior_for_class.html</loc></url>
 <url><loc>https://gillescolling.com/phaseR/reference/VarCorr.html</loc></url>
 <url><loc>https://gillescolling.com/phaseR/reference/waic.html</loc></url>
+<url><loc>https://gillescolling.com/phaseR/reference/with_seed.html</loc></url>
 </urlset>
 

@@ -44,7 +44,10 @@ fit_hmc(
 - seed:
 
   Integer seed; chain `c` samples from the stream seeded by `(seed, c)`,
-  which also draws its initial values
+  which also perturbs its initial values. The initial values are the
+  data-informed starting points of
+  [`initial_values()`](https://gillescolling.com/phaseR/reference/initial_values.md),
+  drawn with `seed`.
 
 - adapt_delta:
 

@@ -126,7 +126,10 @@ reproducible; the seed used is stored in the returned object as <code>seed</code
 <dd><p>Backend settings. For <code>backend = "hmc"</code>: <code>adapt_delta</code>, the target
 acceptance statistic of step-size adaptation (default 0.8; raise it
 towards 1 when there are divergent transitions), and <code>max_treedepth</code>
-(default 10). For <code>backend = "laplace"</code>: <code>n_samples</code> (default 1000).</p></dd>
+(default 10). For <code>backend = "laplace"</code>: <code>n_samples</code> (default 1000)
+and <code>n_starts</code> (default 5), the number of data-informed starting points
+from which the posterior mode is searched; the highest mode found is
+kept.</p></dd>
 
 </dl></div>
     <div class="section level2">

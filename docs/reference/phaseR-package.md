@@ -86,6 +86,16 @@ uncertainty, phaseR produces valid causal estimates.
 
 - Transitions are modelled, not conditioned on
 
+## See also
+
+Useful links:
+
+- <https://gillescolling.com/phaseR/>
+
+- <https://github.com/gcol33/phaseR>
+
+- Report bugs at <https://github.com/gcol33/phaseR/issues>
+
 ## Author
 
 **Maintainer**: Gilles Colling <gilles.colling051@gmail.com>

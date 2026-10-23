@@ -104,7 +104,9 @@ after another or in parallel.</p>
 
 <dt id="arg-seed">seed<a class="anchor" aria-label="anchor" href="#arg-seed"></a></dt>
 <dd><p>Integer seed; chain <code>c</code> samples from the stream seeded by
-<code>(seed, c)</code>, which also draws its initial values</p></dd>
+<code>(seed, c)</code>, which also perturbs its initial values. The initial values
+are the data-informed starting points of <code><a href="initial_values.html">initial_values()</a></code>, drawn with
+<code>seed</code>.</p></dd>
 
 
 <dt id="arg-adapt-delta">adapt_delta<a class="anchor" aria-label="anchor" href="#arg-adapt-delta"></a></dt>

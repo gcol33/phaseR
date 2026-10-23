@@ -96,8 +96,9 @@ predictive accuracy.</p>
 $$WAIC = -2 * (lppd - p_{WAIC})$$</p>
 <p>where lppd is the log pointwise predictive density and p_WAIC is the
 effective number of parameters (variance of the log-likelihood).</p>
-<p>For phase models, the log-likelihood is computed by marginalizing over
-phase uncertainty at the posterior mean parameters.</p>
+<p>For phase models, the log-likelihood of each observation is that given
+the earlier observations of its unit, marginalised over the latent
+phases, at every posterior draw.</p>
     </div>
     <div class="section level2">
     <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>

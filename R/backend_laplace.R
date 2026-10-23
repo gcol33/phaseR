@@ -16,8 +16,8 @@ fit_laplace <- function(stan_data, n_samples = 1000, seed, ...) {
 
   n_params <- stan_data$n_params
 
-  # Build objective function (negative log posterior)
-  neg_log_post <- build_neg_log_posterior(stan_data)
+  # Objective (negative log posterior) and its exact gradient
+  objective <- build_neg_log_posterior(stan_data)
 
   # Initial values
   init <- rep(0, n_params)
@@ -25,7 +25,8 @@ fit_laplace <- function(stan_data, n_samples = 1000, seed, ...) {
   # Find the mode using L-BFGS-B
   opt_result <- stats::optim(
     par = init,
-    fn = neg_log_post,
+    fn = objective$fn,
+    gr = objective$gr,
     method = "L-BFGS-B",
     control = list(maxit = 1000, factr = 1e7),
     hessian = TRUE
@@ -87,16 +88,20 @@ fit_laplace <- function(stan_data, n_samples = 1000, seed, ...) {
 
 #' Build negative log posterior function for optimization
 #'
-#' Creates a function that computes -log p(theta | y) for use with optim(),
+#' Creates -log p(theta | y) and its exact gradient for use with optim(),
 #' from the same model description and prior the NUTS backend samples.
 #'
 #' @param stan_data Prepared data list
-#' @return Function of parameter vector returning negative log posterior
+#' @return List of two functions of the parameter vector: `fn`, the negative
+#'   log posterior, and `gr`, its gradient
 #' @keywords internal
 #'
 build_neg_log_posterior <- function(stan_data) {
-  target <- posterior_target(stan_data)
-  function(params) -phaseR_log_posterior(target, params)
+  density <- phaseR_density(posterior_target(stan_data))
+  list(
+    fn = function(params) -phaseR_log_density(density, params),
+    gr = function(params) -phaseR_log_density_gradient(density, params)$gradient
+  )
 }
 
 

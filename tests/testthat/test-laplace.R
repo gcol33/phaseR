@@ -249,7 +249,7 @@ test_that("build_neg_log_posterior returns finite values", {
   )
 
   stan_data <- phaseR:::prepare_stan_data(model, data)
-  neg_lp <- phaseR:::build_neg_log_posterior(stan_data)
+  neg_lp <- phaseR:::build_neg_log_posterior(stan_data)$fn
 
   # Test at zero
   val_0 <- neg_lp(rep(0, stan_data$n_params))

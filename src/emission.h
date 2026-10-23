@@ -35,19 +35,31 @@ struct Observation {
 // Log density of an observation given the linear predictor mu of its phase:
 // Normal(mu, exp(log_sigma)) for the Gaussian family, Poisson(exp(mu)) and
 // Binomial(n_trials, inv_logit(mu)). log_sigma enters only the Gaussian
-// family.
+// family. Writes the derivatives with respect to mu and log_sigma into
+// d_mu and d_log_sigma.
 template <class T>
 T log_emission(int family, const Observation& obs, const T& mu,
-               const T& log_sigma) {
+               const T& log_sigma, T& d_mu, T& d_log_sigma) {
   using std::exp;
   switch (family) {
-    case kPoisson:
-      return obs.count * mu - exp(mu) + obs.log_const;
-    case kBinomial:
-      return obs.log_const + obs.count * log_inv_logit(mu) +
+    case kPoisson: {
+      T rate = exp(mu);
+      d_mu = obs.count - rate;
+      d_log_sigma = T(0.0);
+      return obs.count * mu - rate + obs.log_const;
+    }
+    case kBinomial: {
+      T log_p = log_inv_logit(mu);
+      d_mu = obs.count - obs.n_trials * exp(log_p);
+      d_log_sigma = T(0.0);
+      return obs.log_const + obs.count * log_p +
              (obs.n_trials - obs.count) * log1m_inv_logit(mu);
+    }
     default: {
-      T z = (obs.y - mu) * exp(-log_sigma);
+      T inv_sigma = exp(-log_sigma);
+      T z = (obs.y - mu) * inv_sigma;
+      d_mu = z * inv_sigma;
+      d_log_sigma = z * z - 1.0;
       return -0.5 * kLog2Pi - log_sigma - 0.5 * z * z;
     }
   }

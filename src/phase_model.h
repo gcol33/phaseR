@@ -53,17 +53,33 @@ struct LinearPredictor {
 // logit of moving from phase c to c + 1 for c < K - 1, and the mean (on the
 // link scale) of phase c - (K - 1) otherwise. The log residual SD of phase k
 // is parameter sigma_offset + k.
+//
+// The gradient is exact: the backward recursion of the phase process gives
+// the derivatives of each unit's log likelihood with respect to its emission
+// and transition terms, which the chain rule carries through the families,
+// the linear predictors and the random-effect parameterisations. Every
+// function is a template on the scalar type, so forward-mode scalars give
+// higher derivatives through the same code.
 class PhaseModel {
 public:
   explicit PhaseModel(const Rcpp::List& target);
 
   int dim() const { return n_params_; }
 
+  // Log posterior at q (length dim()). Unless grad is null, writes its
+  // gradient into grad (length dim()).
   template <class T>
-  T log_posterior(const T* q) const {
-    std::vector<T> eta;
+  T log_posterior(const T* q, T* grad) const {
+    std::vector<T> eta, d_eta;
     predictors(q, eta);
-    return log_likelihood(q, eta) + log_prior(q);
+    if (grad != nullptr) {
+      for (int i = 0; i < n_params_; i++) grad[i] = T(0.0);
+      d_eta.assign(eta.size(), T(0.0));
+    }
+    T lp = log_likelihood(q, eta, grad != nullptr ? d_eta.data() : nullptr,
+                          grad);
+    if (grad != nullptr) predictors_adjoint(q, d_eta, grad);
+    return lp + log_prior(q, grad);
   }
 
 private:
@@ -73,9 +89,9 @@ private:
   int sigma_offset_;
   std::vector<int> unit_start_;
   std::vector<int> unit_end_;
-  std::vector<int> family_;                 // per phase
+  std::vector<int> family_;                     // per phase
   std::vector<std::vector<Observation> > obs_;  // per phase, per observation
-  std::vector<LinearPredictor> lp_;         // K - 1 transitions, then K phases
+  std::vector<LinearPredictor> lp_;             // K - 1 transitions, K phases
   prior::PriorSet prior_;
   int max_unit_size_;
 
@@ -97,6 +113,34 @@ private:
       int l = 0;
       for (int j = 0; j < n_c; j++) {
         for (int i = j; i < n_c; i++) bg[i] = bg[i] + L[l++] * z[j];
+      }
+    }
+  }
+
+  // Adds to grad the derivatives with respect to the term's parameters,
+  // given the derivatives d_b with respect to its coefficients.
+  template <class T>
+  void term_coefficients_adjoint(const RandomEffectTerm& term, const T* q,
+                                 const std::vector<T>& d_b, T* grad) const {
+    const int n_c = term.n_coefs;
+    if (term.kind != RandomEffectTerm::kCholesky) {
+      for (int e = 0; e < term.n_effects(); e++) {
+        grad[term.offset + e] = grad[term.offset + e] + d_b[e];
+      }
+      return;
+    }
+    const T* L = q + term.hyper_offset();
+    T* d_L = grad + term.hyper_offset();
+    for (int g = 0; g < term.n_groups; g++) {
+      const T* z = q + term.offset + g * n_c;
+      T* d_z = grad + term.offset + g * n_c;
+      const T* d_bg = d_b.data() + g * n_c;
+      int l = 0;
+      for (int j = 0; j < n_c; j++) {
+        for (int i = j; i < n_c; i++, l++) {
+          d_z[j] = d_z[j] + L[l] * d_bg[i];
+          d_L[l] = d_L[l] + d_bg[i] * z[j];
+        }
       }
     }
   }
@@ -132,18 +176,54 @@ private:
     }
   }
 
+  // Adds to grad the derivatives with respect to the parameters, given the
+  // derivatives d_eta with respect to the linear predictors.
+  template <class T>
+  void predictors_adjoint(const T* q, const std::vector<T>& d_eta,
+                          T* grad) const {
+    std::vector<T> d_b;
+    for (int c = 0; c < n_predictors(); c++) {
+      const LinearPredictor& lp = lp_[c];
+      const T* d_eta_c = d_eta.data() + static_cast<std::size_t>(c) * n_obs_;
+      T* d_beta = grad + lp.offset;
+      for (int t = 0; t < n_obs_; t++) {
+        const double* x = lp.X.data() + static_cast<std::size_t>(t) * lp.n_coef;
+        for (int j = 0; j < lp.n_coef; j++) {
+          d_beta[j] = d_beta[j] + d_eta_c[t] * x[j];
+        }
+      }
+      for (const RandomEffectTerm& term : lp.re) {
+        const int n_c = term.n_coefs;
+        d_b.assign(term.n_effects(), T(0.0));
+        for (int t = 0; t < n_obs_; t++) {
+          T* d_bg = d_b.data() + term.group[t] * n_c;
+          if (term.Z.empty()) {
+            d_bg[0] = d_bg[0] + d_eta_c[t];
+          } else {
+            const double* z = term.Z.data() + static_cast<std::size_t>(t) * n_c;
+            for (int j = 0; j < n_c; j++) d_bg[j] = d_bg[j] + d_eta_c[t] * z[j];
+          }
+        }
+        term_coefficients_adjoint(term, q, d_b, grad);
+      }
+    }
+  }
+
   // Emission and transition terms of one unit, in the layout of
-  // phase_process.h.
+  // phase_process.h, and the derivatives of the log emission densities with
+  // respect to the phase means (d_mu) and log residual SDs (d_log_sigma).
   template <class T>
   void unit_terms(int start, int n, const T* q, const std::vector<T>& eta,
-                  T* log_emit, T* log_stay, T* log_move) const {
+                  T* log_emit, T* log_stay, T* log_move, T* d_mu,
+                  T* d_log_sigma) const {
     const int K = K_;
     for (int s = 0; s < n; s++) {
       const int t = start + s;
       for (int k = 0; k < K; k++) {
         const T& mu = eta[static_cast<std::size_t>(K - 1 + k) * n_obs_ + t];
         log_emit[s * K + k] =
-          log_emission(family_[k], obs_[k][t], mu, q[sigma_offset_ + k]);
+          log_emission(family_[k], obs_[k][t], mu, q[sigma_offset_ + k],
+                       d_mu[s * K + k], d_log_sigma[s * K + k]);
       }
       if (s == 0) continue;
       for (int k = 0; k < K - 1; k++) {
@@ -154,58 +234,112 @@ private:
     }
   }
 
+  // Log likelihood. Unless d_eta is null, adds its derivatives with respect
+  // to the linear predictors into d_eta and those with respect to the log
+  // residual SDs into grad. A transition predictor x enters as
+  // log inv_logit(x) (move) and log(1 - inv_logit(x)) (stay), with
+  // derivatives 1 - inv_logit(x) and -inv_logit(x).
   template <class T>
-  T log_likelihood(const T* q, const std::vector<T>& eta) const {
-    const std::size_t size = static_cast<std::size_t>(max_unit_size_) * K_;
-    std::vector<T> log_emit(size), log_stay(size), log_move(size), alpha(size);
+  T log_likelihood(const T* q, const std::vector<T>& eta, T* d_eta,
+                   T* grad) const {
+    using std::exp;
+    const int K = K_;
+    const std::size_t size = static_cast<std::size_t>(max_unit_size_) * K;
+    std::vector<T> log_emit(size), log_stay(size), log_move(size), alpha(size),
+      d_mu(size), d_log_sigma(size);
+    std::vector<T> beta, w_emit, w_stay, w_move;
+    if (d_eta != nullptr) {
+      beta.resize(size);
+      w_emit.resize(size);
+      w_stay.resize(size);
+      w_move.resize(size);
+    }
     T total(0.0);
     for (std::size_t i = 0; i < unit_start_.size(); i++) {
       const int start = unit_start_[i];
       const int n = unit_end_[i] - start + 1;
       unit_terms(start, n, q, eta, log_emit.data(), log_stay.data(),
-                 log_move.data());
-      total = total + forward(n, K_, log_emit.data(), log_stay.data(),
-                              log_move.data(), alpha.data());
+                 log_move.data(), d_mu.data(), d_log_sigma.data());
+      T ll = forward(n, K, log_emit.data(), log_stay.data(), log_move.data(),
+                     alpha.data());
+      total = total + ll;
+      if (d_eta == nullptr) continue;
+
+      backward(n, K, log_emit.data(), log_stay.data(), log_move.data(),
+               alpha.data(), ll, beta.data(), w_emit.data(), w_stay.data(),
+               w_move.data());
+      for (int s = 0; s < n; s++) {
+        const int t = start + s;
+        for (int k = 0; k < K; k++) {
+          const int j = s * K + k;
+          T* d = d_eta + static_cast<std::size_t>(K - 1 + k) * n_obs_ + t;
+          *d = *d + w_emit[j] * d_mu[j];
+          grad[sigma_offset_ + k] =
+            grad[sigma_offset_ + k] + w_emit[j] * d_log_sigma[j];
+        }
+        if (s == 0) continue;
+        for (int k = 0; k < K - 1; k++) {
+          const int j = s * K + k;
+          T* d = d_eta + static_cast<std::size_t>(k) * n_obs_ + t;
+          *d = *d + w_move[j] * exp(log_stay[j]) - w_stay[j] * exp(log_move[j]);
+        }
+      }
     }
     return total;
   }
 
+  // Log prior; adds its gradient into grad unless grad is null.
   template <class T>
-  T log_prior(const T* q) const {
+  T log_prior(const T* q, T* grad) const {
     using std::abs;
     using std::log;
-    T lp(0.0);
+    T lp(0.0), d(0.0), d_sd(0.0);
+    auto add = [grad](int i, const T& v) {
+      if (grad != nullptr) grad[i] = grad[i] + v;
+    };
     for (const LinearPredictor& pred : lp_) {
       for (int j = 0; j < pred.n_coef; j++) {
-        lp = lp + prior_.beta(q[pred.offset + j]);
+        lp = lp + prior_.beta(q[pred.offset + j], d);
+        add(pred.offset + j, d);
       }
     }
-    for (int k = 0; k < K_; k++) lp = lp + prior_.sigma(q[sigma_offset_ + k]);
+    for (int k = 0; k < K_; k++) {
+      lp = lp + prior_.sigma(q[sigma_offset_ + k], d);
+      add(sigma_offset_ + k, d);
+    }
 
     for (const LinearPredictor& pred : lp_) {
       for (const RandomEffectTerm& term : pred.re) {
         const int n_c = term.n_coefs;
-        const T* effects = q + term.offset;
-        const T* hyper = q + term.hyper_offset();
+        const int effects = term.offset;
+        const int hyper = term.hyper_offset();
         if (term.kind == RandomEffectTerm::kCholesky) {
           for (int e = 0; e < term.n_effects(); e++) {
-            lp = lp + prior::log_normal(effects[e], 0.0, 1.0);
+            lp = lp + prior::log_normal(q[effects + e], 0.0, 1.0, d);
+            add(effects + e, d);
           }
+          // LKJ-type term on the diagonal of the factor and the reflected
+          // random-effect SD prior on each diagonal element.
           const double eta = prior_.cor_eta();
           int l = 0;
           for (int j = 0; j < n_c; j++) {
-            const T& L_jj = hyper[l];
-            lp = lp + (n_c - j - 1 + 2.0 * (eta - 1.0)) * log(abs(L_jj)) +
-                 prior_.re_scale(L_jj);
+            const T& L_jj = q[hyper + l];
+            const double power = n_c - j - 1 + 2.0 * (eta - 1.0);
+            lp = lp + power * log(abs(L_jj)) + prior_.re_scale(L_jj, d);
+            add(hyper + l, T(d + power / L_jj));
             l += n_c - j;
           }
         } else {
           for (int e = 0; e < term.n_effects(); e++) {
             const int j = (term.kind == RandomEffectTerm::kScalar) ? 0 : e % n_c;
-            lp = lp + prior::log_normal_log_sd(effects[e], hyper[j]);
+            lp = lp + prior::log_normal_log_sd(q[effects + e], q[hyper + j],
+                                               d, d_sd);
+            add(effects + e, d);
+            add(hyper + j, d_sd);
           }
           for (int j = 0; j < term.n_hyper(); j++) {
-            lp = lp + prior_.re_sd(hyper[j]);
+            lp = lp + prior_.re_sd(q[hyper + j], d);
+            add(hyper + j, d);
           }
         }
       }

@@ -6,8 +6,8 @@
 likelihood_change <- function(model, dat, theta, theta_new, prior_change) {
   stan_data <- phaseR:::prepare_stan_data(model, dat, prior())
   target <- phaseR:::posterior_target(stan_data)
-  phaseR:::phaseR_log_posterior(target, theta_new) -
-    phaseR:::phaseR_log_posterior(target, theta) - prior_change
+  phaseR:::log_posterior(target, theta_new) -
+    phaseR:::log_posterior(target, theta) - prior_change
 }
 
 re_vs_fixed_case <- function(re_formula, fixed_formula, fixed_coef, dat,

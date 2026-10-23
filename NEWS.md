@@ -1,5 +1,17 @@
 # phaseR (development version)
 
+* Both backends use the exact gradient of the log posterior instead of
+  finite differences. The backward recursion over the latent phases gives
+  the derivative of each unit's log likelihood with respect to its emission
+  and transition terms (the posterior probabilities of each phase and each
+  move), and the chain rule carries it through the outcome families, the
+  linear predictors, the random-effect parameterisations and the priors.
+  Tests compare it with Richardson-extrapolated central differences on
+  sixteen models (relative error below 1e-6). On the README example
+  (100 units x 5 times, 2 chains x 1000 iterations) NUTS takes 6.5 s
+  instead of 67.5 s at the same minimum ESS (721 against 734), and the
+  Laplace optimiser gets the gradient through `optim(gr = )`.
+
 * Random-effect terms whose grouping factor varies within a unit, such as
   `(1 | year)` crossed with units, now add the effect of each observation's
   own level. The likelihood used the level of the unit's first observation

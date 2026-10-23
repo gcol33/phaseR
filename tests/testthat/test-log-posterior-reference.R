@@ -5,7 +5,7 @@ test_that("log posteriors match the reference values of every model kind", {
   for (name in names(ref)) {
     target <- reference_target(cases[[name]], dat)
     value <- apply(ref[[name]]$params, 1, function(p) {
-      phaseR:::phaseR_log_posterior(target, p)
+      phaseR:::log_posterior(target, p)
     })
     expect_equal(value, ref[[name]]$value, tolerance = 1e-10, info = name)
   }
@@ -32,8 +32,8 @@ test_that("uncorrelated random slopes get one Normal(0, sigma_j) per coefficient
       sum(dnorm(exp(s), 0, 0.5, log = TRUE) + log(2) + s)
   }
   expect_equal(
-    phaseR:::phaseR_log_posterior(target, theta_2) -
-      phaseR:::phaseR_log_posterior(target, theta),
+    phaseR:::log_posterior(target, theta_2) -
+      phaseR:::log_posterior(target, theta),
     re_prior(theta_2[log_sd]) - re_prior(theta[log_sd]),
     tolerance = 1e-10
   )

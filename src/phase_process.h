@@ -59,6 +59,62 @@ T forward(int n, int K, const T* log_emit, const T* log_stay,
   return log_sum_exp(alpha + (n - 1) * K, n_reachable(n - 1, K));
 }
 
+// Derivatives of the log likelihood returned by forward() with respect to
+// its inputs, from the backward recursion
+// beta[s * K + k] = log p(y_{s+1}, ..., y_{n-1} | phase_s = k).
+// The log likelihood is the log of a sum over phase paths of the exponent
+// of the summed terms along each path, so its derivative with respect to a
+// term is the posterior probability that the path uses it:
+//
+//   d_emit[s * K + k]  p(phase_s = k | y);
+//   d_stay[s * K + k]  p(phase_{s-1} = k, phase_s = k | y);
+//   d_move[s * K + k]  p(phase_{s-1} = k, phase_s = k + 1 | y).
+//
+// alpha and log_lik are the outputs of forward(); beta is workspace of the
+// size of alpha. Entries of unreachable phases are set to zero.
+template <class T>
+void backward(int n, int K, const T* log_emit, const T* log_stay,
+              const T* log_move, const T* alpha, const T& log_lik, T* beta,
+              T* d_emit, T* d_stay, T* d_move) {
+  using std::exp;
+  for (int k = 0; k < K; k++) beta[(n - 1) * K + k] = T(0.0);
+  for (int s = n - 1; s >= 1; s--) {
+    const T* next = beta + s * K;
+    const T* e = log_emit + s * K;
+    const int reach_prev = n_reachable(s - 1, K);
+    for (int k = 0; k < reach_prev; k++) {
+      if (k < K - 1) {
+        beta[(s - 1) * K + k] =
+          log_sum_exp(T(log_stay[s * K + k] + e[k] + next[k]),
+                      T(log_move[s * K + k] + e[k + 1] + next[k + 1]));
+      } else {
+        beta[(s - 1) * K + k] = e[k] + next[k];
+      }
+    }
+  }
+
+  for (int s = 0; s < n; s++) {
+    const int reach = n_reachable(s, K);
+    for (int k = 0; k < K; k++) {
+      const int i = s * K + k;
+      d_emit[i] = (k < reach) ? T(exp(alpha[i] + beta[i] - log_lik)) : T(0.0);
+      d_stay[i] = T(0.0);
+      d_move[i] = T(0.0);
+    }
+    if (s == 0) continue;
+    const T* prev = alpha + (s - 1) * K;
+    const T* e = log_emit + s * K;
+    const T* next = beta + s * K;
+    const int reach_prev = n_reachable(s - 1, K);
+    for (int k = 0; k < reach_prev && k < K - 1; k++) {
+      d_stay[s * K + k] =
+        exp(prev[k] + log_stay[s * K + k] + e[k] + next[k] - log_lik);
+      d_move[s * K + k] =
+        exp(prev[k] + log_move[s * K + k] + e[k + 1] + next[k + 1] - log_lik);
+    }
+  }
+}
+
 }  // namespace phaser
 
 #endif

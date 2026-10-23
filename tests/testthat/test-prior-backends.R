@@ -64,8 +64,8 @@ test_that("every model family evaluates the prior it is given", {
                       dnorm(beta, 1, 0.3, log = TRUE)) +
       sum(dnorm(sigma, 0, 1, log = TRUE) - dcauchy(sigma, 0, 2, log = TRUE))
 
-    diff <- phaseR:::phaseR_log_posterior(target_a, theta) -
-      phaseR:::phaseR_log_posterior(target_b, theta)
+    diff <- phaseR:::log_posterior(target_a, theta) -
+      phaseR:::log_posterior(target_b, theta)
     expect_equal(diff, expected, tolerance = 1e-8, info = kind)
   }
 })
@@ -77,8 +77,8 @@ test_that("the Laplace objective is the shared log posterior", {
     model, dat, prior(beta ~ student_t(3, 0, 1), re ~ half_cauchy(1)))
   theta <- seq(-0.5, 0.5, length.out = stan_data$n_params)
   expect_equal(
-    phaseR:::build_neg_log_posterior(stan_data)(theta),
-    -phaseR:::phaseR_log_posterior(phaseR:::posterior_target(stan_data), theta)
+    phaseR:::build_neg_log_posterior(stan_data)$fn(theta),
+    -phaseR:::log_posterior(phaseR:::posterior_target(stan_data), theta)
   )
 })
 

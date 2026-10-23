@@ -10,15 +10,38 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
-// phaseR_log_posterior
-double phaseR_log_posterior(List target, NumericVector params);
-RcppExport SEXP _phaseR_phaseR_log_posterior(SEXP targetSEXP, SEXP paramsSEXP) {
+// phaseR_density
+SEXP phaseR_density(List target);
+RcppExport SEXP _phaseR_phaseR_density(SEXP targetSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< List >::type target(targetSEXP);
+    rcpp_result_gen = Rcpp::wrap(phaseR_density(target));
+    return rcpp_result_gen;
+END_RCPP
+}
+// phaseR_log_density
+double phaseR_log_density(SEXP density, NumericVector params);
+RcppExport SEXP _phaseR_phaseR_log_density(SEXP densitySEXP, SEXP paramsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type density(densitySEXP);
     Rcpp::traits::input_parameter< NumericVector >::type params(paramsSEXP);
-    rcpp_result_gen = Rcpp::wrap(phaseR_log_posterior(target, params));
+    rcpp_result_gen = Rcpp::wrap(phaseR_log_density(density, params));
+    return rcpp_result_gen;
+END_RCPP
+}
+// phaseR_log_density_gradient
+List phaseR_log_density_gradient(SEXP density, NumericVector params);
+RcppExport SEXP _phaseR_phaseR_log_density_gradient(SEXP densitySEXP, SEXP paramsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type density(densitySEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type params(paramsSEXP);
+    rcpp_result_gen = Rcpp::wrap(phaseR_log_density_gradient(density, params));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -41,7 +64,9 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_phaseR_phaseR_log_posterior", (DL_FUNC) &_phaseR_phaseR_log_posterior, 2},
+    {"_phaseR_phaseR_density", (DL_FUNC) &_phaseR_phaseR_density, 1},
+    {"_phaseR_phaseR_log_density", (DL_FUNC) &_phaseR_phaseR_log_density, 2},
+    {"_phaseR_phaseR_log_density_gradient", (DL_FUNC) &_phaseR_phaseR_log_density_gradient, 2},
     {"_phaseR_phaseR_nuts_sampler", (DL_FUNC) &_phaseR_phaseR_nuts_sampler, 7},
     {NULL, NULL, 0}
 };

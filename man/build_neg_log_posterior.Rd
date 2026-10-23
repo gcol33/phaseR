@@ -10,10 +10,11 @@ build_neg_log_posterior(stan_data)
 \item{stan_data}{Prepared data list}
 }
 \value{
-Function of parameter vector returning negative log posterior
+List of two functions of the parameter vector: \code{fn}, the negative
+log posterior, and \code{gr}, its gradient
 }
 \description{
-Creates a function that computes -log p(theta | y) for use with optim(),
+Creates -log p(theta | y) and its exact gradient for use with optim(),
 from the same model description and prior the NUTS backend samples.
 }
 \keyword{internal}

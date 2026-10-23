@@ -83,3 +83,21 @@ posterior_target <- function(stan_data) {
     prior = stan_data$prior_cpp
   )
 }
+
+
+#' Evaluate the log posterior of a model description
+#'
+#' @param target Model description from [posterior_target()]
+#' @param params Parameter vector
+#' @param gradient If `TRUE`, also return the exact gradient
+#' @return The log posterior at `params`; with `gradient = TRUE` a list with
+#'   `value` and `gradient`
+#' @keywords internal
+log_posterior <- function(target, params, gradient = FALSE) {
+  density <- phaseR_density(target)
+  if (gradient) {
+    phaseR_log_density_gradient(density, params)
+  } else {
+    phaseR_log_density(density, params)
+  }
+}

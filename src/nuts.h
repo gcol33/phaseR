@@ -3,35 +3,10 @@
 
 #include <Rcpp.h>
 #include <vector>
+#include "log_density.h"
 #include "rng.h"
 
 namespace phaser {
-
-// Log density of a target distribution on an unconstrained parameter space,
-// known up to an additive constant. Subclasses implement evaluate(); the
-// gradient is obtained by central finite differences of evaluate(), so every
-// model only has to provide its log posterior. A NaN log density is treated
-// as -Inf, i.e. a point outside the support.
-class LogDensity {
-public:
-  explicit LogDensity(int dim) : dim_(dim), buffer_(dim) {}
-  virtual ~LogDensity() {}
-
-  int dim() const { return dim_; }
-
-  double log_density(const std::vector<double>& q);
-
-  // Log density at q; writes its gradient into grad.
-  double log_density_gradient(const std::vector<double>& q,
-                              std::vector<double>& grad);
-
-protected:
-  virtual double evaluate(const Rcpp::NumericVector& q) = 0;
-
-private:
-  int dim_;
-  Rcpp::NumericVector buffer_;
-};
 
 struct NutsSettings {
   int n_iter;
@@ -51,7 +26,7 @@ struct NutsSettings {
 // windows (75 / 25-doubling / 50 iterations).
 //
 // Returns the post-warmup draws and per-iteration diagnostics.
-Rcpp::List run_nuts(LogDensity& target, Rng& rng, const NutsSettings& settings);
+Rcpp::List run_nuts(const LogDensity& target, Rng& rng, const NutsSettings& settings);
 
 }  // namespace phaser
 

@@ -10,9 +10,6 @@ namespace {
 
 const double kInf = std::numeric_limits<double>::infinity();
 
-// Step of the central finite-difference gradient.
-const double kGradientStep = 1e-6;
-
 // Energy error above which a trajectory is declared divergent.
 const double kMaxDeltaH = 1000.0;
 
@@ -68,7 +65,7 @@ struct Transition {
 // transition built on it.
 class Nuts {
 public:
-  Nuts(LogDensity& target, Rng& rng, int max_treedepth)
+  Nuts(const LogDensity& target, Rng& rng, int max_treedepth)
     : target_(target), rng_(rng), max_treedepth_(max_treedepth),
       n_(target.dim()), inv_metric_(target.dim(), 1.0), divergent_(false) {}
 
@@ -94,7 +91,7 @@ public:
   void leapfrog(PhasePoint& z, double epsilon) {
     for (int i = 0; i < n_; i++) z.p[i] += 0.5 * epsilon * z.grad[i];
     for (int i = 0; i < n_; i++) z.q[i] += epsilon * inv_metric_[i] * z.p[i];
-    z.lp = target_.log_density_gradient(z.q, z.grad);
+    z.lp = target_.log_density_gradient(z.q.data(), z.grad.data());
     for (int i = 0; i < n_; i++) z.p[i] += 0.5 * epsilon * z.grad[i];
   }
 
@@ -299,7 +296,7 @@ private:
     return persist;
   }
 
-  LogDensity& target_;
+  const LogDensity& target_;
   Rng& rng_;
   int max_treedepth_;
   int n_;
@@ -428,30 +425,7 @@ private:
 }  // namespace
 
 
-double LogDensity::log_density(const std::vector<double>& q) {
-  for (int i = 0; i < dim_; i++) buffer_[i] = q[i];
-  double lp = evaluate(buffer_);
-  return std::isnan(lp) ? -kInf : lp;
-}
-
-double LogDensity::log_density_gradient(const std::vector<double>& q,
-                                        std::vector<double>& grad) {
-  grad.resize(dim_);
-  for (int i = 0; i < dim_; i++) buffer_[i] = q[i];
-  double lp = evaluate(buffer_);
-  for (int i = 0; i < dim_; i++) {
-    buffer_[i] = q[i] + kGradientStep;
-    double f_plus = evaluate(buffer_);
-    buffer_[i] = q[i] - kGradientStep;
-    double f_minus = evaluate(buffer_);
-    buffer_[i] = q[i];
-    grad[i] = (f_plus - f_minus) / (2.0 * kGradientStep);
-  }
-  return std::isnan(lp) ? -kInf : lp;
-}
-
-
-Rcpp::List run_nuts(LogDensity& target, Rng& rng,
+Rcpp::List run_nuts(const LogDensity& target, Rng& rng,
                     const NutsSettings& settings) {
   const int n = target.dim();
   const int n_iter = settings.n_iter;
@@ -461,11 +435,12 @@ Rcpp::List run_nuts(LogDensity& target, Rng& rng,
   // Initial state: retry until the log density and its gradient are finite.
   PhasePoint z;
   z.p.assign(n, 0.0);
+  z.grad.assign(n, 0.0);
   bool initialized = false;
   for (int attempt = 0; attempt < 100 && !initialized; attempt++) {
     Rcpp::NumericVector init = rng.initial_values(n);
     z.q.assign(init.begin(), init.end());
-    z.lp = target.log_density_gradient(z.q, z.grad);
+    z.lp = target.log_density_gradient(z.q.data(), z.grad.data());
     initialized = std::isfinite(z.lp);
     for (int i = 0; i < n && initialized; i++) {
       initialized = std::isfinite(z.grad[i]);

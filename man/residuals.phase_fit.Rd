@@ -17,5 +17,8 @@
 Numeric vector of residuals
 }
 \description{
-Computes residuals (observed - fitted) marginalized over phase uncertainty.
+One-step prediction residuals: the observed outcome minus \code{\link[=fitted]{fitted()}},
+divided for \code{type = "pearson"} by the SD of the one-step predictive
+distribution (phase mixture of the family variances, plus the posterior
+variance of the predictive mean).
 }

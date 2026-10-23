@@ -41,3 +41,7 @@ phaseR_pointwise_log_likelihood <- function(target, draws) {
     .Call(`_phaseR_phaseR_pointwise_log_likelihood`, target, draws)
 }
 
+phaseR_phase_summaries <- function(target, draws) {
+    .Call(`_phaseR_phaseR_phase_summaries`, target, draws)
+}
+

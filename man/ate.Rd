@@ -15,7 +15,7 @@ ate(object, treatment_var, treat_value = 1, control_value = 0, n_sims = NULL)
 
 \item{control_value}{Value representing control (default 0)}
 
-\item{n_sims}{Number of posterior draws}
+\item{n_sims}{Number of posterior draws (default: all)}
 }
 \value{
 A list with:
@@ -23,12 +23,16 @@ A list with:
 \item \code{ate}: Posterior mean of ATE
 \item \code{ate_sd}: Posterior SD of ATE
 \item \code{ate_ci}: 95\% credible interval
-\item \code{samples}: Vector of ATE samples
+\item \code{samples}: Vector of ATE samples, one per draw
 }
 }
 \description{
-Compute the average treatment effect by comparing counterfactual outcomes
-under treatment vs control conditions.
+The effect of setting \code{treatment_var} to \code{treat_value} against
+\code{control_value} for every observation, on the expected outcome given the
+covariates: for each posterior draw, the expected outcome integrates over
+the phase each observation is in, so a treatment that changes the
+transition probabilities acts through the phase as well as through the
+dynamics. The effect is averaged over the observations of the data.
 }
 \examples{
 \dontrun{

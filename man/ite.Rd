@@ -15,11 +15,13 @@ ite(object, treatment_var, treat_value = 1, control_value = 0, n_sims = NULL)
 
 \item{control_value}{Value representing control (default 0)}
 
-\item{n_sims}{Number of posterior draws}
+\item{n_sims}{Number of posterior draws (default: all)}
 }
 \value{
-A data frame with unit-level treatment effects
+A data frame with one row per unit: \code{id} and the posterior mean,
+SD and 95\% interval of its effect
 }
 \description{
-Compute treatment effects for each unit, integrating over phase uncertainty.
+The effect of the treatment on the expected outcome, as in \code{\link[=ate]{ate()}},
+averaged over the observations of each unit.
 }

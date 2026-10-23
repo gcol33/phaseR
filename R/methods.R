@@ -258,21 +258,26 @@ coef.phase_fit <- function(object, ...) {
 
 #' Extract fitted values from phase_fit
 #'
-#' Returns predicted response values at each observation.
+#' The posterior mean of the one-step predictive mean of each observation,
+#' E(y_t | y_0, ..., y_{t-1}): the outcome mean of each phase weighted by
+#' the probability of the phase given the unit's earlier outcomes.
 #'
 #' @param object A `phase_fit` object
 #' @param ... Additional arguments (unused)
 #'
-#' @return Numeric vector of fitted values
+#' @return Numeric vector of fitted values, one per row of the data
 #' @export
 fitted.phase_fit <- function(object, ...) {
-  predict(object, type = "response")
+  one_step_moments(object)$mean
 }
 
 
 #' Extract residuals from phase_fit
 #'
-#' Computes residuals (observed - fitted) marginalized over phase uncertainty.
+#' One-step prediction residuals: the observed outcome minus [fitted()],
+#' divided for `type = "pearson"` by the SD of the one-step predictive
+#' distribution (phase mixture of the family variances, plus the posterior
+#' variance of the predictive mean).
 #'
 #' @param object A `phase_fit` object
 #' @param type Type of residuals: "response" (default) or "pearson"
@@ -281,29 +286,35 @@ fitted.phase_fit <- function(object, ...) {
 #' @return Numeric vector of residuals
 #' @export
 residuals.phase_fit <- function(object, type = c("response", "pearson"), ...) {
-
   type <- match.arg(type)
-
   y <- object$data[[object$model$dynamics[[1]]$response]]
-  fitted_vals <- fitted(object)
-
-  if (is.data.frame(fitted_vals)) {
-    fitted_vals <- fitted_vals$mean
-  }
-
-  resid <- y - fitted_vals
-
-  if (type == "pearson") {
-    # Get residual SD (weighted average of phase-specific SDs)
-    sigma_idx <- grep("^log_sigma_", object$param_names)
-    sigmas <- exp(colMeans(object$draws[, sigma_idx, drop = FALSE]))
-
-    # Use average sigma for simplicity
-    sigma_avg <- mean(sigmas)
-    resid <- resid / sigma_avg
-  }
-
+  m <- one_step_moments(object)
+  resid <- y - m$mean
+  if (type == "pearson") resid <- resid / sqrt(m$var)
   resid
+}
+
+
+#' Moments of the one-step predictive distribution
+#'
+#' @param object A `phase_fit` object
+#' @return List with `mean` and `var` per row of the data: the predictive
+#'   mean and variance of y_t given y_0, ..., y_{t-1}, over the posterior
+#' @keywords internal
+one_step_moments <- function(object) {
+  s <- phase_summaries(object, object$data, object$draws)
+  family_var <- s$mean
+  for (k in seq_along(s$family)) {
+    family_var[, , k] <- switch(s$family[k] + 1L,
+      s$sigma[, k]^2,
+      s$mean[, , k],
+      s$mean[, , k] * (1 - s$mean[, , k])
+    )
+  }
+  mean_d <- apply(s$predictive * s$mean, c(1, 2), sum)
+  second_d <- apply(s$predictive * (family_var + s$mean^2), c(1, 2), sum)
+  mean <- colMeans(mean_d)
+  list(mean = mean, var = colMeans(second_d) - mean^2)
 }
 
 
@@ -321,7 +332,8 @@ nobs.phase_fit <- function(object, ...) {
 
 #' Log-likelihood of phase_fit
 #'
-#' Returns the log-likelihood at the posterior mean.
+#' The log-likelihood at the posterior mean of the parameters, marginalised
+#' over the latent phases with the forward recursion the backends fit with.
 #'
 #' @param object A `phase_fit` object
 #' @param ... Additional arguments (unused)
@@ -329,24 +341,10 @@ nobs.phase_fit <- function(object, ...) {
 #' @return A logLik object
 #' @export
 logLik.phase_fit <- function(object, ...) {
-
-  # Get posterior mean parameters
-  params <- colMeans(object$draws)
-
-  # Compute log-likelihood at posterior mean
-  y <- object$data[[object$model$dynamics[[1]]$response]]
-  fitted_vals <- fitted(object)
-  if (is.data.frame(fitted_vals)) {
-    fitted_vals <- fitted_vals$mean
-  }
-
-  # Get sigma (average of phase-specific)
-  sigma_idx <- grep("^log_sigma_", object$param_names)
-  sigmas <- exp(colMeans(object$draws[, sigma_idx, drop = FALSE]))
-  sigma_avg <- mean(sigmas)
-
-  # Compute log-likelihood assuming Gaussian
-  ll <- sum(dnorm(y, fitted_vals, sigma_avg, log = TRUE))
+  at_mean <- object
+  at_mean$draws <- matrix(colMeans(object$draws), nrow = 1,
+                          dimnames = list(NULL, colnames(object$draws)))
+  ll <- sum(compute_pointwise_ll(at_mean))
 
   # Number of parameters (excluding random effects for df)
   n_fixed <- sum(!grepl("^u_|^v_", object$param_names))

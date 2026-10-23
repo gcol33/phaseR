@@ -1,5 +1,33 @@
 # phaseR (development version)
 
+* Predictions, counterfactuals and treatment effects are computed by the
+  model both backends fit (`src/phase_model.h`) instead of R copies of the
+  two-phase Gaussian recursion, so they cover every model: k phases,
+  Poisson and binomial dynamics and random effects (levels the fit has not
+  seen contribute no effect). For two Gaussian phases without random
+  effects, `posterior_predict(type = "phase")` and
+  `predict(type = "transition")` are unchanged. Other changes:
+  - `posterior_predict()` returns rows in the order of `newdata`; it
+    returned them sorted by unit and time, so `ite()` matched effects to
+    the wrong units when the data were not sorted. `type = "phase"` gains
+    `phase`, the phase whose probability is returned (default: the last).
+  - `predict(type = "phase")` and `predict(type = "response")` average over
+    the posterior draws; they used the transition coefficients at their
+    posterior mean, and `"response"` ignored the outcome family (link) and
+    the random effects. `predict(type = "transition")` returns one element
+    per move for models with more than two phases.
+  - `ate()` and `ite()` contrast the expected outcomes under treatment and
+    control, integrating over the phases, for the same posterior draws.
+    They contrasted two independent outcome simulations, from separately
+    sampled draws when `n_sims` was set, which added outcome noise to the
+    effect's interval.
+  - `fitted()` returns the one-step predictive mean
+    E(y_t | y_0, ..., y_(t-1)) of each observation, `residuals()` the
+    corresponding residuals (Pearson residuals divide by the predictive
+    SD), and `logLik()` the log-likelihood marginalised over the phases at
+    the posterior mean. They used a Gaussian density around phase-averaged
+    predictions with the average residual SD.
+
 * The Cholesky factor of correlated random effects with three or more
   coefficients is named in the order the likelihood and `VarCorr()` read it
   (by column: `L_..._1_1`, `L_..._2_1`, `L_..._3_1`, `L_..._2_2`, ...). The

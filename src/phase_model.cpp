@@ -58,7 +58,7 @@ LinearPredictor read_predictor(const Rcpp::List& spec, int n_obs,
                  "observations.", static_cast<int>(term.group.size()), n_obs);
     }
     for (int g : term.group) {
-      if (g < 0 || g >= term.n_groups) {
+      if (g < -1 || g >= term.n_groups) {
         Rcpp::stop("Random-effect group index out of range.");
       }
     }
@@ -168,6 +168,68 @@ void PhaseModel::pointwise_log_likelihood(const double* q, double* out) const {
   }
 }
 
+void PhaseModel::phase_summaries(const double* q, PhaseSummaries& out) const {
+  const int K = K_;
+  const std::size_t n_cells = static_cast<std::size_t>(n_obs_) * K;
+  out.mean.assign(n_cells, 0.0);
+  out.marginal.assign(n_cells, 0.0);
+  out.predictive.assign(n_cells, 0.0);
+  out.filtered.assign(n_cells, 0.0);
+  out.move.assign(n_cells, 0.0);
+
+  std::vector<double> eta;
+  predictors(q, eta);
+  for (int t = 0; t < n_obs_; t++) {
+    for (int k = 0; k < K; k++) {
+      const double mu = eta[static_cast<std::size_t>(K - 1 + k) * n_obs_ + t];
+      double m = mu;
+      if (family_[k] == kPoisson) m = std::exp(mu);
+      if (family_[k] == kBinomial) m = std::exp(log_inv_logit(mu));
+      out.mean[t * K + k] = m;
+    }
+  }
+
+  const std::size_t size = static_cast<std::size_t>(max_unit_size_) * K;
+  std::vector<double> log_emit(size), log_stay(size), log_move(size),
+    alpha(size), d_mu(size), d_log_sigma(size), marginal(K), next(K);
+  for (std::size_t i = 0; i < unit_start_.size(); i++) {
+    const int start = unit_start_[i];
+    const int n = unit_end_[i] - start + 1;
+    unit_terms(start, n, q, eta, log_emit.data(), log_stay.data(),
+               log_move.data(), d_mu.data(), d_log_sigma.data());
+    forward(n, K, log_emit.data(), log_stay.data(), log_move.data(),
+            alpha.data());
+
+    for (int s = 0; s < n; s++) {
+      const int t = start + s;
+      const int reach = n_reachable(s, K);
+      const double log_norm = log_sum_exp(alpha.data() + s * K, reach);
+      for (int k = 0; k < reach; k++) {
+        out.filtered[t * K + k] = std::exp(alpha[s * K + k] - log_norm);
+      }
+      if (s == 0) {
+        out.predictive[t * K] = 1.0;
+        out.marginal[t * K] = 1.0;
+        continue;
+      }
+      for (int k = 0; k < K - 1; k++) {
+        out.move[t * K + k] = std::exp(log_move[s * K + k]);
+      }
+      // One step of the phase process from the previous observation's
+      // filtered and marginal distributions.
+      for (int k = 0; k < K; k++) {
+        const double stay = (k < K - 1) ? std::exp(log_stay[s * K + k]) : 1.0;
+        const double in_pred = out.filtered[(t - 1) * K + k] * stay +
+          (k > 0 ? out.filtered[(t - 1) * K + k - 1] * out.move[t * K + k - 1] : 0.0);
+        const double in_marg = out.marginal[(t - 1) * K + k] * stay +
+          (k > 0 ? out.marginal[(t - 1) * K + k - 1] * out.move[t * K + k - 1] : 0.0);
+        out.predictive[t * K + k] = in_pred;
+        out.marginal[t * K + k] = in_marg;
+      }
+    }
+  }
+}
+
 std::vector<int> PhaseModel::random_effect_indices() const {
   std::vector<int> out;
   for (const LinearPredictor& pred : lp_) {
@@ -187,6 +249,7 @@ std::vector<std::vector<int> > PhaseModel::unit_random_effects() const {
     for (const LinearPredictor& pred : lp_) {
       for (const RandomEffectTerm& term : pred.re) {
         for (int t = unit_start_[i]; t <= unit_end_[i]; t++) {
+          if (term.group[t] < 0) continue;
           const int first = term.offset + term.group[t] * term.n_coefs;
           for (int j = 0; j < term.n_coefs; j++) effects.push_back(first + j);
         }

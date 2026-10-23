@@ -143,3 +143,42 @@ NumericMatrix phaseR_pointwise_log_likelihood(List target, NumericMatrix draws) 
   }
   return out;
 }
+
+
+// [[Rcpp::export]]
+List phaseR_phase_summaries(List target, NumericMatrix draws) {
+  phaser::PhaseModel model(target);
+  if (draws.ncol() != model.dim()) {
+    stop("`draws` has %d columns; the model has %d parameters.",
+         draws.ncol(), model.dim());
+  }
+  const int n_draws = draws.nrow();
+  const int n_obs = model.n_obs();
+  const int K = model.n_phases();
+  const char* names[5] = {"mean", "marginal", "predictive", "filtered", "move"};
+  std::vector<NumericVector> out;
+  for (int a = 0; a < 5; a++) {
+    NumericVector arr(static_cast<R_xlen_t>(n_draws) * n_obs * K);
+    arr.attr("dim") = IntegerVector::create(n_draws, n_obs, K);
+    out.push_back(arr);
+  }
+  phaser::PhaseModel::PhaseSummaries s;
+  std::vector<double> q(model.dim());
+  for (int d = 0; d < n_draws; d++) {
+    for (int i = 0; i < model.dim(); i++) q[i] = draws(d, i);
+    model.phase_summaries(q.data(), s);
+    const std::vector<double>* parts[5] = {&s.mean, &s.marginal, &s.predictive,
+                                           &s.filtered, &s.move};
+    for (int a = 0; a < 5; a++) {
+      for (int t = 0; t < n_obs; t++) {
+        for (int k = 0; k < K; k++) {
+          out[a][d + static_cast<R_xlen_t>(n_draws) * (t + static_cast<R_xlen_t>(n_obs) * k)] =
+            (*parts[a])[t * K + k];
+        }
+      }
+    }
+  }
+  return List::create(Named(names[0]) = out[0], Named(names[1]) = out[1],
+                      Named(names[2]) = out[2], Named(names[3]) = out[3],
+                      Named(names[4]) = out[4]);
+}

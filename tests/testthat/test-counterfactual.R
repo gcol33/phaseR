@@ -139,15 +139,3 @@ test_that("ate errors on missing treatment variable", {
 
   expect_error(ate(fit, treatment_var = "nonexistent"), "not found")
 })
-
-
-test_that("log_sum_exp handles edge cases", {
-
-  expect_equal(log_sum_exp(-Inf, 0), 0)
-  expect_equal(log_sum_exp(0, -Inf), 0)
-  expect_equal(log_sum_exp(-Inf, -Inf), -Inf)
-
-  # Standard case
-  result <- log_sum_exp(log(0.3), log(0.7))
-  expect_equal(exp(result), 1.0, tolerance = 1e-10)
-})

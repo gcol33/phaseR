@@ -27,7 +27,8 @@ struct RandomEffectTerm {
   int n_groups;
   int n_coefs;
   int offset;
-  std::vector<int> group;  // level of each observation, 0-based
+  std::vector<int> group;  // level of each observation, 0-based; -1 for a
+                           // level without an effect (new in predictions)
   std::vector<double> Z;   // n_obs x n_coefs, row-major; empty: intercept
 
   int n_effects() const { return n_groups * n_coefs; }
@@ -73,6 +74,22 @@ public:
   // For each unit, the indices of the random effects its likelihood depends
   // on, in increasing order.
   std::vector<std::vector<int> > unit_random_effects() const;
+
+  // Per observation t and phase k, in arrays indexed [t * K + k]:
+  //   mean        mean of the outcome in phase k (response scale);
+  //   marginal    p(phase_t = k) given the covariates alone;
+  //   predictive  p(phase_t = k | y_0, ..., y_{t-1}) within the unit;
+  //   filtered    p(phase_t = k | y_0, ..., y_t) within the unit;
+  //   move        probability of moving from phase k to k + 1 between the
+  //               previous observation and t (zero at a unit's first
+  //               observation and for the last phase).
+  struct PhaseSummaries {
+    std::vector<double> mean, marginal, predictive, filtered, move;
+  };
+  void phase_summaries(const double* q, PhaseSummaries& out) const;
+
+  int n_phases() const { return K_; }
+  int n_obs() const { return n_obs_; }
 
   // Log likelihood of each observation given the earlier observations of
   // its unit, log p(y_s | y_0, ..., y_{s-1}), marginalised over the latent
@@ -178,6 +195,7 @@ private:
         term_coefficients(term, q, b);
         const int n_c = term.n_coefs;
         for (int t = 0; t < n_obs_; t++) {
+          if (term.group[t] < 0) continue;
           const T* bg = b.data() + term.group[t] * n_c;
           if (term.Z.empty()) {
             eta_c[t] = eta_c[t] + bg[0];
@@ -210,6 +228,7 @@ private:
         const int n_c = term.n_coefs;
         d_b.assign(term.n_effects(), T(0.0));
         for (int t = 0; t < n_obs_; t++) {
+          if (term.group[t] < 0) continue;
           T* d_bg = d_b.data() + term.group[t] * n_c;
           if (term.Z.empty()) {
             d_bg[0] = d_bg[0] + d_eta_c[t];

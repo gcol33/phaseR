@@ -15,17 +15,30 @@
 \arguments{
 \item{object}{A \code{phase_fit} object}
 
-\item{newdata}{Optional new data for prediction}
+\item{newdata}{Optional new data for prediction, with columns \code{id},
+\code{time} and the covariates of the model; defaults to the data of the fit}
 
-\item{type}{Type of prediction: "response" (default), "phase", or "transition"}
+\item{type}{\code{"response"} (default): the expected outcome, marginalised
+over the phase; \code{"phase"}: the probability of each phase;
+\code{"transition"}: the probability of each move between consecutive
+phases at each observation (zero at a unit's first observation)}
 
-\item{summary}{Return summary statistics (default TRUE) or full draws}
+\item{summary}{Return summary statistics (default \code{TRUE}) or the draws
+(one row per draw, one column per row of \code{newdata})}
 
 \item{...}{Additional arguments (unused)}
 }
 \value{
-A data frame with predictions and credible intervals
+For \code{"response"}, a data frame of summaries (or the matrix of
+draws). For \code{"phase"}, a data frame with one column per phase holding
+the posterior mean probability. For \code{"transition"}, the summaries (or
+draws) of the single move of a two-phase model, or a named list of them
+with one element per move of a model with more phases.
 }
 \description{
-Predict from a phase model
+Predictions given the covariates of \code{newdata} alone, averaged over the
+posterior draws: each unit starts in the first phase and moves through
+the phases with the transition probabilities its covariates imply, and
+each phase's outcome follows its dynamics, random effects included.
+Random-effect levels that the fit has not seen contribute no effect.
 }

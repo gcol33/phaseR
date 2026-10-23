@@ -18,12 +18,15 @@ A list with:
 \itemize{
 \item \code{mean}: Mean predicted outcome per observation
 \item \code{sd}: SD of predicted outcome per observation
-\item \code{samples}: Matrix of samples (rows = obs, cols = draws)
+\item \code{lower}, \code{upper}: 2.5\% and 97.5\% quantiles per observation
+\item \code{samples}: Matrix of samples (rows = rows of \code{newdata}, cols = draws)
 }
 }
 \description{
-Predict outcomes under hypothetical covariate values, integrating over
-phase uncertainty.
+Simulates outcomes under hypothetical covariate values with
+\code{\link[=posterior_predict]{posterior_predict()}}: every unit moves through the phases with the
+transition probabilities of \code{newdata} and draws its outcomes from the
+dynamics of its current phase.
 }
 \examples{
 \dontrun{

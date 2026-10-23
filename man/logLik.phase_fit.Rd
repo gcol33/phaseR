@@ -15,5 +15,6 @@
 A logLik object
 }
 \description{
-Returns the log-likelihood at the posterior mean.
+The log-likelihood at the posterior mean of the parameters, marginalised
+over the latent phases with the forward recursion the backends fit with.
 }

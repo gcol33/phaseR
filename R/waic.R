@@ -24,8 +24,9 @@
 #' where lppd is the log pointwise predictive density and p_WAIC is the
 #' effective number of parameters (variance of the log-likelihood).
 #'
-#' For phase models, the log-likelihood is computed by marginalizing over
-#' phase uncertainty at the posterior mean parameters.
+#' For phase models, the log-likelihood of each observation is that given
+#' the earlier observations of its unit, marginalised over the latent
+#' phases, at every posterior draw.
 #'
 #' @references
 #' Watanabe, S. (2010). Asymptotic equivalence of Bayes cross validation and
@@ -102,89 +103,23 @@ print.waic_phaseR <- function(x, digits = 1, ...) {
 
 
 #' Compute pointwise log-likelihood
+#'
+#' The log-likelihood of each observation given the earlier observations of
+#' its unit, marginalised over the latent phases, for every posterior draw
+#' (random effects at their drawn values). The forward recursion is the one
+#' both backends fit with, so every model family is covered.
+#'
+#' @param fit A `phase_fit` object
+#' @return Matrix with one row per draw and one column per row of
+#'   `fit$data`
 #' @keywords internal
 compute_pointwise_ll <- function(fit) {
-
-  draws <- fit$draws
-  n_draws <- nrow(draws)
-  data <- fit$data
-  model <- fit$model
-  n_obs <- nrow(data)
-
-  # Build design matrices
-  trans_formula <- model$transitions[[1]]$formula
-  dyn_formula_0 <- model$dynamics[[1]]$formula
-  dyn_formula_1 <- if (length(model$dynamics) > 1) model$dynamics[[2]]$formula else dyn_formula_0
-
-  X_trans <- model.matrix(trans_formula, data)
-  X_dyn_0 <- model.matrix(update(dyn_formula_0, NULL ~ .), data)
-  X_dyn_1 <- model.matrix(update(dyn_formula_1, NULL ~ .), data)
-
-  # Get parameter indices
-  param_names <- fit$param_names
-  trans_idx <- grep("^beta_trans", param_names)
-  beta_0_idx <- grep(paste0("^beta_", model$phases$names[1], "_"), param_names)
-  beta_1_idx <- grep(paste0("^beta_", model$phases$names[2], "_"), param_names)
-  sigma_0_idx <- grep(paste0("^log_sigma_", model$phases$names[1], "$"), param_names)
-  sigma_1_idx <- grep(paste0("^log_sigma_", model$phases$names[2], "$"), param_names)
-
-  y <- data[[model$dynamics[[1]]$response]]
-  unit_ids <- unique(data$id)
-
-  # Matrix: draws x observations
-
-  ll_matrix <- matrix(NA_real_, nrow = n_draws, ncol = n_obs)
-
-  for (d in seq_len(n_draws)) {
-    beta_trans <- draws[d, trans_idx]
-    beta_0 <- draws[d, beta_0_idx]
-    beta_1 <- draws[d, beta_1_idx]
-    sigma_0 <- exp(draws[d, sigma_0_idx])
-    sigma_1 <- exp(draws[d, sigma_1_idx])
-
-    # Compute phase probabilities via forward algorithm
-    for (uid in unit_ids) {
-      idx <- which(data$id == uid)
-      n_t <- length(idx)
-
-      alpha_0 <- 1
-      alpha_1 <- 0
-
-      for (t in seq_len(n_t)) {
-        obs_idx <- idx[t]
-
-        # Emission probabilities
-        mu_0 <- sum(X_dyn_0[obs_idx, ] * beta_0)
-        mu_1 <- sum(X_dyn_1[obs_idx, ] * beta_1)
-        emit_0 <- dnorm(y[obs_idx], mu_0, sigma_0)
-        emit_1 <- dnorm(y[obs_idx], mu_1, sigma_1)
-
-        if (t == 1) {
-          # Initial: always phase 0
-          ll_matrix[d, obs_idx] <- log(emit_0 + 1e-300)
-        } else {
-          # Transition probability
-          p_trans <- plogis(sum(X_trans[obs_idx, ] * beta_trans))
-
-          # Forward step
-          new_alpha_0 <- alpha_0 * (1 - p_trans) * emit_0
-          new_alpha_1 <- (alpha_0 * p_trans + alpha_1) * emit_1
-
-          # Log-likelihood for this observation (marginalized)
-          ll_matrix[d, obs_idx] <- log(new_alpha_0 + new_alpha_1 + 1e-300)
-
-          # Normalize for next step
-          total <- new_alpha_0 + new_alpha_1
-          if (total > 0) {
-            alpha_0 <- new_alpha_0 / total
-            alpha_1 <- new_alpha_1 / total
-          }
-        }
-      }
-    }
-  }
-
-  ll_matrix
+  stan_data <- prepare_stan_data(fit$model, fit$data, prior())
+  ll <- phaseR_pointwise_log_likelihood(posterior_target(stan_data),
+                                        fit$draws)
+  # prepare_stan_data() sorts the rows by unit and time.
+  sorted <- order(fit$data$id, fit$data$time)
+  ll[, match(seq_len(nrow(fit$data)), sorted), drop = FALSE]
 }
 
 

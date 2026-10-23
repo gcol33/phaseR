@@ -121,6 +121,18 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// phaseR_pointwise_log_likelihood
+NumericMatrix phaseR_pointwise_log_likelihood(List target, NumericMatrix draws);
+RcppExport SEXP _phaseR_phaseR_pointwise_log_likelihood(SEXP targetSEXP, SEXP drawsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< List >::type target(targetSEXP);
+    Rcpp::traits::input_parameter< NumericMatrix >::type draws(drawsSEXP);
+    rcpp_result_gen = Rcpp::wrap(phaseR_pointwise_log_likelihood(target, draws));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_phaseR_phaseR_laplace", (DL_FUNC) &_phaseR_phaseR_laplace, 1},
@@ -132,6 +144,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_phaseR_phaseR_log_density", (DL_FUNC) &_phaseR_phaseR_log_density, 2},
     {"_phaseR_phaseR_log_density_gradient", (DL_FUNC) &_phaseR_phaseR_log_density_gradient, 2},
     {"_phaseR_phaseR_nuts_sampler", (DL_FUNC) &_phaseR_phaseR_nuts_sampler, 8},
+    {"_phaseR_phaseR_pointwise_log_likelihood", (DL_FUNC) &_phaseR_phaseR_pointwise_log_likelihood, 2},
     {NULL, NULL, 0}
 };
 

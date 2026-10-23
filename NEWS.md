@@ -1,5 +1,12 @@
 # phaseR (development version)
 
+* `waic()` and `loo()` compute the pointwise log likelihood with the forward
+  recursion the backends fit with. The R copy of the recursion they used
+  knew only two Gaussian phases without random effects, so for models with
+  random effects, Poisson or binomial outcomes or more than two phases it
+  evaluated a different model (random effects at zero, every outcome
+  Gaussian, two phases).
+
 * The Laplace backend integrates random effects out before it looks for a
   mode. It approximated the joint posterior of all parameters by a Gaussian
   at its mode, but with random effects that mode does not exist: the SDs

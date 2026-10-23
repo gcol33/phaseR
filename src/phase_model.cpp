@@ -145,6 +145,29 @@ PhaseModel::PhaseModel(const Rcpp::List& target)
 }
 
 
+void PhaseModel::pointwise_log_likelihood(const double* q, double* out) const {
+  std::vector<double> eta;
+  predictors(q, eta);
+  const std::size_t size = static_cast<std::size_t>(max_unit_size_) * K_;
+  std::vector<double> log_emit(size), log_stay(size), log_move(size),
+    alpha(size), d_mu(size), d_log_sigma(size);
+  for (std::size_t i = 0; i < unit_start_.size(); i++) {
+    const int start = unit_start_[i];
+    const int n = unit_end_[i] - start + 1;
+    unit_terms(start, n, q, eta, log_emit.data(), log_stay.data(),
+               log_move.data(), d_mu.data(), d_log_sigma.data());
+    forward(n, K_, log_emit.data(), log_stay.data(), log_move.data(),
+            alpha.data());
+    double previous = 0.0;
+    for (int s = 0; s < n; s++) {
+      const double current = log_sum_exp(alpha.data() + s * K_,
+                                         n_reachable(s, K_));
+      out[start + s] = current - previous;
+      previous = current;
+    }
+  }
+}
+
 std::vector<int> PhaseModel::random_effect_indices() const {
   std::vector<int> out;
   for (const LinearPredictor& pred : lp_) {

@@ -37,3 +37,7 @@ phaseR_nuts_sampler <- function(target, init, n_iter, n_warmup, seed, chain, ada
     .Call(`_phaseR_phaseR_nuts_sampler`, target, init, n_iter, n_warmup, seed, chain, adapt_delta, max_treedepth)
 }
 
+phaseR_pointwise_log_likelihood <- function(target, draws) {
+    .Call(`_phaseR_phaseR_pointwise_log_likelihood`, target, draws)
+}
+

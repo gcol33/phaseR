@@ -6,7 +6,17 @@
 \usage{
 compute_pointwise_ll(fit)
 }
+\arguments{
+\item{fit}{A \code{phase_fit} object}
+}
+\value{
+Matrix with one row per draw and one column per row of
+\code{fit$data}
+}
 \description{
-Compute pointwise log-likelihood
+The log-likelihood of each observation given the earlier observations of
+its unit, marginalised over the latent phases, for every posterior draw
+(random effects at their drawn values). The forward recursion is the one
+both backends fit with, so every model family is covered.
 }
 \keyword{internal}

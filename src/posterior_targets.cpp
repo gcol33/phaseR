@@ -124,3 +124,22 @@ List phaseR_nuts_sampler(List target, NumericVector init, int n_iter,
   return phaser::run_nuts(*density, as<std::vector<double> >(init), rng,
                           settings);
 }
+
+
+// [[Rcpp::export]]
+NumericMatrix phaseR_pointwise_log_likelihood(List target, NumericMatrix draws) {
+  phaser::PhaseModel model(target);
+  if (draws.ncol() != model.dim()) {
+    stop("`draws` has %d columns; the model has %d parameters.",
+         draws.ncol(), model.dim());
+  }
+  const int n_obs = as<NumericVector>(target["y"]).size();
+  NumericMatrix out(draws.nrow(), n_obs);
+  std::vector<double> q(model.dim()), ll(n_obs);
+  for (int d = 0; d < draws.nrow(); d++) {
+    for (int i = 0; i < model.dim(); i++) q[i] = draws(d, i);
+    model.pointwise_log_likelihood(q.data(), ll.data());
+    for (int t = 0; t < n_obs; t++) out(d, t) = ll[t];
+  }
+  return out;
+}

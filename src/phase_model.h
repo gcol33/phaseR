@@ -74,6 +74,12 @@ public:
   // on, in increasing order.
   std::vector<std::vector<int> > unit_random_effects() const;
 
+  // Log likelihood of each observation given the earlier observations of
+  // its unit, log p(y_s | y_0, ..., y_{s-1}), marginalised over the latent
+  // phases; out has one entry per observation. The entries of a unit sum to
+  // its log likelihood.
+  void pointwise_log_likelihood(const double* q, double* out) const;
+
   // Log posterior at q (length dim()). Unless grad is null, writes its
   // gradient into grad (length dim()).
   template <class T>

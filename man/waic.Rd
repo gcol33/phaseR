@@ -32,8 +32,9 @@ WAIC is computed as:
 where lppd is the log pointwise predictive density and p_WAIC is the
 effective number of parameters (variance of the log-likelihood).
 
-For phase models, the log-likelihood is computed by marginalizing over
-phase uncertainty at the posterior mean parameters.
+For phase models, the log-likelihood of each observation is that given
+the earlier observations of its unit, marginalised over the latent
+phases, at every posterior draw.
 }
 \examples{
 \dontrun{

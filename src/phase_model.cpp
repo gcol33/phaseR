@@ -168,6 +168,49 @@ void PhaseModel::pointwise_log_likelihood(const double* q, double* out) const {
   }
 }
 
+std::vector<double> PhaseModel::unit_log_likelihoods(const double* q) const {
+  std::vector<double> pointwise(n_obs_);
+  pointwise_log_likelihood(q, pointwise.data());
+  std::vector<double> out(unit_start_.size(), 0.0);
+  for (std::size_t i = 0; i < unit_start_.size(); i++) {
+    for (int t = unit_start_[i]; t <= unit_end_[i]; t++) out[i] += pointwise[t];
+  }
+  return out;
+}
+
+std::vector<double> PhaseModel::effect_log_priors(const double* q) const {
+  std::vector<double> out(n_params_, 0.0);
+  double d = 0.0, d_sd = 0.0;
+  for (const LinearPredictor& pred : lp_) {
+    for (const RandomEffectTerm& term : pred.re) {
+      for (int e = 0; e < term.n_effects(); e++) {
+        const int i = term.offset + e;
+        if (term.kind == RandomEffectTerm::kCholesky) {
+          out[i] = prior::log_normal(q[i], 0.0, 1.0, d);
+        } else {
+          const int j = (term.kind == RandomEffectTerm::kScalar) ? 0 : e % term.n_coefs;
+          out[i] = prior::log_normal_log_sd(q[i], q[term.hyper_offset() + j], d, d_sd);
+        }
+      }
+    }
+  }
+  return out;
+}
+
+std::vector<double> PhaseModel::effect_prior_sds(const double* q) const {
+  std::vector<double> out(n_params_, 0.0);
+  for (const LinearPredictor& pred : lp_) {
+    for (const RandomEffectTerm& term : pred.re) {
+      for (int e = 0; e < term.n_effects(); e++) {
+        const int j = (term.kind == RandomEffectTerm::kScalar) ? 0 : e % term.n_coefs;
+        out[term.offset + e] = (term.kind == RandomEffectTerm::kCholesky)
+          ? 1.0 : std::exp(q[term.hyper_offset() + j]);
+      }
+    }
+  }
+  return out;
+}
+
 void PhaseModel::phase_summaries(const double* q, PhaseSummaries& out) const {
   const int K = K_;
   const std::size_t n_cells = static_cast<std::size_t>(n_obs_) * K;

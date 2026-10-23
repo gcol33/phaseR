@@ -2,7 +2,7 @@
 #include <algorithm>
 #include <cmath>
 #include <vector>
-#include "dense_cholesky.h"
+#include "block_precision.h"
 #include "dual.h"
 #include "phase_model.h"
 
@@ -52,14 +52,19 @@ std::vector<std::vector<int> > colour_effects(
 // where f is the log joint posterior, u*(theta) maximises f over u, and
 // A = -d2f/du2 at u*. Given theta the effects have a Gaussian prior, so this
 // is the approximation of Tierney and Kadane (1986) used by INLA and TMB.
-// Its gradient is exact:
+// Its gradient is exact. With phi(q) = -log det(-d2f/du2) / 2 and r the
+// derivatives of f + phi with respect to u,
 //
-//   d/dtheta_j = df/dtheta_j + tr(A^{-1} D_j H) / 2,
+//   d/dtheta = d(f + phi)/dtheta + r^T du*/dtheta,
+//   du*/dtheta = A^{-1} d2f/du dtheta,
 //
-// with H = d2f/du2 and D_j the derivative along (e_j, du*/dtheta_j),
-// du*/dtheta = A^{-1} d2f/du dtheta (the envelope theorem removes the
-// df/du term). Second and third derivatives come from forward-mode dual
-// numbers run through the exact gradient of the log posterior.
+// so the last term is d2f/dtheta du s with s = A^{-1} r: one
+// Hessian-vector product. The derivative of phi with respect to every
+// parameter is tr(A^{-1} d(d2f/du2)) / 2; on the Hessian's sparsity pattern
+// it is a sum over the colours c of the effects of w_c^T H'' c, the third
+// derivative of f along c and w_c (the entries of A^{-1} in c's columns),
+// one pass with nested forward-mode dual numbers through the exact gradient
+// of the log posterior per colour.
 class LaplaceMarginal {
 public:
   explicit LaplaceMarginal(const Rcpp::List& target)
@@ -90,6 +95,11 @@ public:
       r.erase(std::unique(r.begin(), r.end()), r.end());
     }
     colours_ = colour_effects(rows_);
+    precision_ = BlockPrecision(rows_);
+    for (const std::vector<int>& effects : model_.unit_random_effects()) {
+      unit_block_.push_back(effects.empty()
+                              ? -1 : precision_.block_of(u_position[effects[0]]));
+    }
     u_.assign(n_u, 0.0);
   }
 
@@ -118,6 +128,42 @@ public:
     return value_;
   }
 
+  // Number of blocks of effects whose Newton iterations from u = 0 and from
+  // the effects shifted by +2 and -2 prior SDs end at different maxima at
+  // theta: the effects given theta have several modes there, and a Laplace
+  // approximation around one of them misses the others.
+  int multimodal_blocks(const std::vector<double>& theta) {
+    const int n_u = n_u_count();
+    if (n_u == 0) return 0;
+    const int n_blocks = precision_.n_blocks();
+    std::vector<double> base = full(theta, std::vector<double>(n_u, 0.0));
+    const std::vector<double> sd = model_.effect_prior_sds(base.data());
+    std::vector<std::vector<double> > ends;
+    std::vector<double> f_block;
+    std::vector<char> converged;
+    for (double shift : {0.0, 2.0, -2.0}) {
+      std::vector<double> q = base;
+      for (int r = 0; r < n_u; r++) q[u_index_[r]] = shift * sd[u_index_[r]];
+      if (newton_blocks(q, f_block, converged)) ends.push_back(q);
+    }
+    have_value_ = false;
+    int count = 0;
+    for (int b = 0; b < n_blocks; b++) {
+      bool differ = false;
+      for (std::size_t k = 1; k < ends.size() && !differ; k++) {
+        for (int r : precision_.members(b)) {
+          const double x0 = ends[0][u_index_[r]];
+          if (std::fabs(ends[k][u_index_[r]] - x0) > 1e-4 * (1.0 + std::fabs(x0))) {
+            differ = true;
+            break;
+          }
+        }
+      }
+      if (differ) count++;
+    }
+    return count;
+  }
+
   // Hessian of the log marginal posterior (row-major), by central
   // differences of its exact gradient.
   std::vector<double> hessian(const std::vector<double>& theta) {
@@ -144,15 +190,38 @@ public:
     return H;
   }
 
-  // At theta: the mode u*, the precision A of the effects given theta, and
-  // du*/dtheta (n_u x n_theta, row-major).
+  // At theta: the mode u*, the diagonal of A^{-1} (the variances of the
+  // effects given theta) and du*/dtheta = A^{-1} d2f/du dtheta
+  // (n_u x n_theta, row-major).
   void conditional(const std::vector<double>& theta, std::vector<double>& mode,
-                   std::vector<double>& precision, std::vector<double>& slope) {
-    std::vector<double> grad;
-    evaluate(theta, &grad);
+                   std::vector<double>& variance, std::vector<double>& slope) {
+    evaluate(theta, nullptr);
     mode = u_;
-    precision = A_;
-    slope = du_dtheta_;
+    variance.resize(n_u_count());
+    for (int r = 0; r < n_u_count(); r++) variance[r] = precision_.inverse_at(r, r);
+    const int p = n_theta();
+    const int n_u = n_u_count();
+    slope.assign(static_cast<std::size_t>(n_u) * p, 0.0);
+    std::vector<D1> qd(q_.size()), gd(q_.size());
+    std::vector<double> column(n_u);
+    for (int j = 0; j < p; j++) {
+      for (std::size_t i = 0; i < q_.size(); i++) qd[i] = D1(q_[i], 0.0);
+      qd[theta_index_[j]].d = 1.0;
+      model_.log_posterior(qd.data(), gd.data());
+      for (int r = 0; r < n_u; r++) column[r] = gd[u_index_[r]].d;
+      precision_.solve(column.data());
+      for (int r = 0; r < n_u; r++) slope[r * p + j] = column[r];
+    }
+  }
+
+  // Draws of the effects' deviation from their mode given theta, A^{-1/2} z,
+  // for the rows of z (each of length n_u).
+  void effect_noise(const std::vector<double>& theta, std::vector<double>& z,
+                    int n_rows) {
+    evaluate(theta, nullptr);
+    for (int i = 0; i < n_rows; i++) {
+      precision_.solve_factor_transpose(z.data() + static_cast<std::size_t>(i) * n_u_count());
+    }
   }
 
 private:
@@ -166,9 +235,8 @@ private:
   std::vector<double> u_;          // mode of the effects at theta_
   std::vector<double> q_;          // full parameter vector (theta_, u_)
   std::vector<double> g_;          // gradient of f at q_
-  std::vector<double> A_;          // -d2f/du2 at q_
-  std::vector<double> L_;          // Cholesky factor of A_
-  std::vector<double> du_dtheta_;  // n_u x n_theta
+  BlockPrecision precision_;       // A = -d2f/du2 at q_, factorised
+  std::vector<int> unit_block_;    // block of each unit's effects, -1: none
   std::vector<double> gradient_;
   double value_;
   bool have_value_;
@@ -184,142 +252,204 @@ private:
   }
 
   // A = -d2f/du2 at q, from one Hessian-vector product per colour.
-  void precision_at(const std::vector<double>& q, std::vector<double>& A) const {
-    const int n_u = n_u_count();
-    A.assign(static_cast<std::size_t>(n_u) * n_u, 0.0);
+  void precision_at(const std::vector<double>& q) {
+    precision_.set_zero();
     std::vector<D1> qd(q.size()), gd(q.size());
     for (const std::vector<int>& colour : colours_) {
       for (std::size_t i = 0; i < q.size(); i++) qd[i] = D1(q[i], 0.0);
       for (int a : colour) qd[u_index_[a]].d = 1.0;
       model_.log_posterior(qd.data(), gd.data());
       for (int a : colour) {
-        for (int r : rows_[a]) A[r * n_u + a] = -gd[u_index_[r]].d;
+        for (int r : rows_[a]) precision_.at(r, a) = -gd[u_index_[r]].d;
       }
     }
   }
 
-  // Maximises f over u at theta_ by Newton's method with backtracking,
-  // starting from u = 0, the prior mean of the effects, so that the mode
-  // reached, and with it the approximation, is a function of theta alone;
-  // sets u_, q_, g_, A_, L_ and value_.
-  void find_mode() {
-    const int n_u = n_u_count();
-    q_ = full(theta_, std::vector<double>(n_u, 0.0));
-    g_.assign(q_.size(), 0.0);
-    double f = model_.log_posterior(q_.data(), g_.data());
-    inner_converged_ = true;
+  // Log posterior of each block of effects: the log likelihood of the units
+  // whose effects lie in the block plus the effects' prior. Given theta, f is
+  // the sum of these and terms that do not depend on the effects, so the
+  // blocks can be maximised separately.
+  std::vector<double> block_values(const std::vector<double>& q) const {
+    std::vector<double> out(precision_.n_blocks(), 0.0);
+    const std::vector<double> unit_ll = model_.unit_log_likelihoods(q.data());
+    for (std::size_t i = 0; i < unit_ll.size(); i++) {
+      if (unit_block_[i] >= 0) out[unit_block_[i]] += unit_ll[i];
+    }
+    const std::vector<double> priors = model_.effect_log_priors(q.data());
+    for (int r = 0; r < n_u_count(); r++) {
+      out[precision_.block_of(r)] += priors[u_index_[r]];
+    }
+    return out;
+  }
 
-    if (n_u > 0) {
-      inner_converged_ = false;
-      std::vector<double> delta(n_u), q_new(q_.size()), g_new(q_.size());
-      double last_decrement = HUGE_VAL;
-      for (int iter = 0; iter < 200; iter++) {
-        precision_at(q_, A_);
-        L_ = A_;
+  // Newton's method with backtracking from the effects in q, run in every
+  // block of effects with its own damping, step length and stopping
+  // decision, so the mode reached in one block does not depend on the
+  // others. On return q holds the effects reached, f_block the value of each
+  // block and converged whether each block stopped at a strict maximum.
+  // Returns false if the log posterior or its Hessian in the effects is not
+  // finite along the way.
+  bool newton_blocks(std::vector<double>& q, std::vector<double>& f_block,
+                     std::vector<char>& converged) {
+    const int n_u = n_u_count();
+    const int n_blocks = precision_.n_blocks();
+    std::vector<double> g(q.size());
+    if (!std::isfinite(model_.log_posterior(q.data(), g.data()))) return false;
+    f_block = block_values(q);
+    converged.assign(n_blocks, 0);
+    std::vector<double> delta(n_u, 0.0), decrement(n_blocks, 0.0),
+      step(n_blocks, 1.0), last_decrement(n_blocks, HUGE_VAL);
+    std::vector<char> done(n_blocks, 0), pending(n_blocks, 0),
+      damped(n_blocks, 0);
+    std::vector<double> q_new;
+    for (int iter = 0; iter < 200; iter++) {
+      precision_at(q);
+      int n_active = 0;
+      for (int b = 0; b < n_blocks; b++) {
+        if (done[b]) continue;
+        const double max_diag = precision_.max_abs_diagonal(b);
         double damping = 0.0;
-        while (!cholesky(L_, n_u)) {
-          double max_diag = 0.0;
-          for (int i = 0; i < n_u; i++) max_diag = std::max(max_diag, std::fabs(A_[i * n_u + i]));
+        while (std::isfinite(max_diag) && damping < 1e12 * (1.0 + max_diag) &&
+               !precision_.factor_block(b, damping)) {
           damping = std::max(1e-8 * (1.0 + max_diag), 10.0 * damping);
-          L_ = A_;
-          for (int i = 0; i < n_u; i++) L_[i * n_u + i] += damping;
         }
-        for (int r = 0; r < n_u; r++) delta[r] = g_[u_index_[r]];
-        cholesky_solve(L_, n_u, delta.data());
-        double decrement = 0.0;
-        for (int r = 0; r < n_u; r++) decrement += g_[u_index_[r]] * delta[r];
+        if (!std::isfinite(max_diag) || damping >= 1e12 * (1.0 + max_diag)) {
+          return false;
+        }
+        damped[b] = damping > 0.0;
+        decrement[b] = 0.0;
+        for (int r : precision_.members(b)) delta[r] = g[u_index_[r]];
+        precision_.solve_block(b, delta.data());
+        for (int r : precision_.members(b)) decrement[b] += g[u_index_[r]] * delta[r];
         // The Newton decrement is twice the remaining ascent of the local
         // quadratic model and falls quadratically near the mode. Iterate
-        // until it vanishes or, once small, stops falling: the iterate is
+        // until it vanishes or, once small, stops falling: the block is
         // then at the resolution of double precision.
-        const double scale = 1.0 + std::fabs(f);
-        if (damping == 0.0 &&
-            (decrement < 1e-24 * scale ||
-             (decrement < 1e-12 * scale && decrement > 0.25 * last_decrement))) {
-          inner_converged_ = true;
-          break;
+        const double scale = 1.0 + std::fabs(f_block[b]);
+        if (!damped[b] &&
+            (decrement[b] < 1e-24 * scale ||
+             (decrement[b] < 1e-12 * scale && decrement[b] > 0.25 * last_decrement[b]))) {
+          done[b] = 1;
+          converged[b] = 1;
+          continue;
         }
-        last_decrement = damping == 0.0 ? decrement : HUGE_VAL;
-        double t = 1.0;
-        double f_new = f;
-        bool accepted = false;
-        for (int halving = 0; halving < 60; halving++) {
-          q_new = q_;
-          for (int r = 0; r < n_u; r++) q_new[u_index_[r]] += t * delta[r];
-          f_new = model_.log_posterior(q_new.data(), g_new.data());
-          if (std::isfinite(f_new) && f_new >= f + 1e-4 * t * decrement) {
-            accepted = true;
-            break;
+        last_decrement[b] = damped[b] ? HUGE_VAL : decrement[b];
+        step[b] = 1.0;
+        pending[b] = 1;
+        n_active++;
+      }
+      if (n_active == 0) break;
+
+      // Backtracking in every active block at once.
+      q_new = q;
+      for (int halving = 0; halving < 60 && n_active > 0; halving++) {
+        for (int b = 0; b < n_blocks; b++) {
+          if (!pending[b]) continue;
+          for (int r : precision_.members(b)) {
+            q_new[u_index_[r]] = q[u_index_[r]] + step[b] * delta[r];
           }
-          t *= 0.5;
         }
-        if (!accepted) {
-          // No ascent along the Newton direction: the gradient is at the
-          // limit of floating-point resolution.
-          inner_converged_ = damping == 0.0;
-          break;
+        const std::vector<double> f_new = block_values(q_new);
+        for (int b = 0; b < n_blocks; b++) {
+          if (!pending[b]) continue;
+          if (std::isfinite(f_new[b]) &&
+              f_new[b] >= f_block[b] + 1e-4 * step[b] * decrement[b]) {
+            pending[b] = 0;
+            f_block[b] = f_new[b];
+            n_active--;
+          } else {
+            step[b] *= 0.5;
+          }
         }
-        q_.swap(q_new);
-        g_.swap(g_new);
-        f = f_new;
       }
-      for (int r = 0; r < n_u; r++) u_[r] = q_[u_index_[r]];
-      precision_at(q_, A_);
-      L_ = A_;
-      if (!cholesky(L_, n_u)) {
-        Rcpp::stop("The log posterior has no strict maximum in the random "
-                   "effects at these parameters; the Laplace approximation "
-                   "is not defined. Use backend = \"hmc\".");
+      for (int b = 0; b < n_blocks; b++) {
+        if (!pending[b]) continue;
+        // No ascent along the Newton direction: the block is at the limit
+        // of floating-point resolution.
+        for (int r : precision_.members(b)) q_new[u_index_[r]] = q[u_index_[r]];
+        pending[b] = 0;
+        done[b] = 1;
+        converged[b] = !damped[b];
       }
+      q.swap(q_new);
+      if (!std::isfinite(model_.log_posterior(q.data(), g.data()))) return false;
     }
-    value_ = f + 0.5 * n_u * kLog2Pi - 0.5 * cholesky_log_det(L_, n_u);
+    return true;
   }
 
-  // Total derivative of the log marginal along (e_j, du*/dtheta_j). The
-  // df/du term vanishes at the exact mode and is kept for the residual of
-  // the Newton iteration.
+  // Maximises f over u at theta_ by Newton's method from u = 0, the prior
+  // mean of the effects, so that the mode reached, and with it the
+  // approximation, is a function of theta alone. Sets u_, q_, g_,
+  // precision_ and value_.
+  void find_mode() {
+    const int n_u = n_u_count();
+    inner_converged_ = true;
+    q_ = full(theta_, std::vector<double>(n_u, 0.0));
+    g_.assign(q_.size(), 0.0);
+    if (n_u > 0) {
+      std::vector<double> f_block;
+      std::vector<char> converged;
+      if (!newton_blocks(q_, f_block, converged)) {
+        value_ = -HUGE_VAL;
+        return;
+      }
+      for (char c : converged) {
+        if (!c) inner_converged_ = false;
+      }
+      for (int r = 0; r < n_u; r++) u_[r] = q_[u_index_[r]];
+    }
+    const double f = model_.log_posterior(q_.data(), g_.data());
+    if (!std::isfinite(f)) {
+      value_ = -HUGE_VAL;
+      return;
+    }
+    if (n_u > 0) {
+      precision_at(q_);
+      if (!precision_.factor(0.0)) {
+        // No strict maximum in the effects: the approximation is not
+        // defined at these parameters.
+        value_ = -HUGE_VAL;
+        return;
+      }
+    }
+    value_ = f + 0.5 * n_u * kLog2Pi - (n_u > 0 ? 0.5 * precision_.log_det() : 0.0);
+  }
+
   void compute_gradient() {
     const int p = n_theta();
     const int n_u = n_u_count();
     const std::size_t n = q_.size();
+    if (!std::isfinite(value_)) {
+      gradient_.assign(p, NAN);
+      return;
+    }
     gradient_.assign(p, 0.0);
     for (int j = 0; j < p; j++) gradient_[j] = g_[theta_index_[j]];
-    du_dtheta_.assign(static_cast<std::size_t>(n_u) * p, 0.0);
     if (n_u == 0) return;
 
-    // du*/dtheta_j = A^{-1} d2f/du dtheta_j.
-    std::vector<D1> qd(n), gd(n);
-    std::vector<double> column(n_u);
-    for (int j = 0; j < p; j++) {
-      for (std::size_t i = 0; i < n; i++) qd[i] = D1(q_[i], 0.0);
-      qd[theta_index_[j]].d = 1.0;
-      model_.log_posterior(qd.data(), gd.data());
-      for (int r = 0; r < n_u; r++) column[r] = gd[u_index_[r]].d;
-      cholesky_solve(L_, n_u, column.data());
-      for (int r = 0; r < n_u; r++) {
-        du_dtheta_[r * p + j] = column[r];
-        gradient_[j] += g_[u_index_[r]] * column[r];
+    // Derivatives of phi with respect to every parameter.
+    std::vector<double> d_phi(n, 0.0);
+    std::vector<D2> qdd(n), gdd(n);
+    for (const std::vector<int>& colour : colours_) {
+      for (std::size_t i = 0; i < n; i++) qdd[i] = D2(D1(q_[i], 0.0), D1(0.0, 0.0));
+      for (int a : colour) {
+        qdd[u_index_[a]].v.d = 1.0;
+        for (int r : rows_[a]) qdd[u_index_[r]].d.v = precision_.inverse_at(r, a);
       }
+      model_.log_posterior(qdd.data(), gdd.data());
+      for (std::size_t i = 0; i < n; i++) d_phi[i] += 0.5 * gdd[i].d.d;
     }
 
-    // tr(A^{-1} D_j H) / 2: third derivatives along the total direction
-    // (e_j, du*/dtheta_j) and the colour seeds, contracted with A^{-1} on
-    // the Hessian's sparsity pattern.
-    const std::vector<double> A_inv = cholesky_inverse(L_, n_u);
-    std::vector<D2> qdd(n), gdd(n);
+    // s = A^{-1} r, then d2f/dtheta du s by one Hessian-vector product.
+    std::vector<double> s(n_u);
+    for (int r = 0; r < n_u; r++) s[r] = g_[u_index_[r]] + d_phi[u_index_[r]];
+    precision_.solve(s.data());
+    std::vector<D1> qd(n), gd(n);
+    for (std::size_t i = 0; i < n; i++) qd[i] = D1(q_[i], 0.0);
+    for (int r = 0; r < n_u; r++) qd[u_index_[r]].d = s[r];
+    model_.log_posterior(qd.data(), gd.data());
     for (int j = 0; j < p; j++) {
-      double trace = 0.0;
-      for (const std::vector<int>& colour : colours_) {
-        for (std::size_t i = 0; i < n; i++) qdd[i] = D2(D1(q_[i], 0.0), D1(0.0, 0.0));
-        qdd[theta_index_[j]].d.v = 1.0;
-        for (int r = 0; r < n_u; r++) qdd[u_index_[r]].d.v = du_dtheta_[r * p + j];
-        for (int a : colour) qdd[u_index_[a]].v.d = 1.0;
-        model_.log_posterior(qdd.data(), gdd.data());
-        for (int a : colour) {
-          for (int r : rows_[a]) trace += A_inv[r * n_u + a] * gdd[u_index_[r]].d.d;
-        }
-      }
-      gradient_[j] += 0.5 * trace;
+      gradient_[j] += d_phi[theta_index_[j]] + gd[theta_index_[j]].d;
     }
   }
 };
@@ -393,11 +523,34 @@ NumericMatrix phaseR_laplace_hessian(SEXP laplace, NumericVector theta) {
 // [[Rcpp::export]]
 List phaseR_laplace_conditional(SEXP laplace, NumericVector theta) {
   XPtr<phaser::LaplaceMarginal> lap(laplace);
-  std::vector<double> mode, precision, slope;
-  lap->conditional(theta_vector(*lap, theta), mode, precision, slope);
+  std::vector<double> mode, variance, slope;
+  lap->conditional(theta_vector(*lap, theta), mode, variance, slope);
   const int n_u = lap->n_u_count();
   return List::create(
     Named("mode") = wrap(mode),
-    Named("precision") = row_major_matrix(precision, n_u, n_u),
+    Named("variance") = wrap(variance),
     Named("slope") = row_major_matrix(slope, n_u, lap->n_theta()));
+}
+
+
+// [[Rcpp::export]]
+NumericMatrix phaseR_laplace_effect_noise(SEXP laplace, NumericVector theta,
+                                          NumericMatrix z) {
+  XPtr<phaser::LaplaceMarginal> lap(laplace);
+  const int n_u = lap->n_u_count();
+  if (z.ncol() != n_u) stop("`z` needs one column per random effect.");
+  const int n = z.nrow();
+  std::vector<double> x(static_cast<std::size_t>(n) * n_u);
+  for (int i = 0; i < n; i++) {
+    for (int r = 0; r < n_u; r++) x[static_cast<std::size_t>(i) * n_u + r] = z(i, r);
+  }
+  lap->effect_noise(theta_vector(*lap, theta), x, n);
+  return row_major_matrix(x, n, n_u);
+}
+
+
+// [[Rcpp::export]]
+int phaseR_laplace_multimodal(SEXP laplace, NumericVector theta) {
+  XPtr<phaser::LaplaceMarginal> lap(laplace);
+  return lap->multimodal_blocks(theta_vector(*lap, theta));
 }

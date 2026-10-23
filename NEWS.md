@@ -1,5 +1,26 @@
 # phaseR (development version)
 
+* The Laplace backend is faster for models with random effects: on 80
+  units with 12 sites it takes 0.37 s instead of 1.61 s for site
+  intercepts in both phases and 0.45 s instead of 4.23 s for a correlated
+  site slope, with the same mode (to 0.002 posterior SD). The gradient of
+  the log marginal now costs one third-derivative pass per colour of the
+  effects and one Hessian-vector product, instead of one per colour and
+  parameter; the Hessian in the effects is block diagonal over groups of
+  effects that share no unit and is factorised block by block, with
+  Newton's method run in each block separately; and each starting point is
+  first moved to the mode of the fixed effects with the effects at zero,
+  so starts that arrive at the same point share one search. The mode of
+  the effects is still found from `u = 0` at every parameter value, so the
+  approximation remains a function of the parameters.
+
+* A Laplace search that reaches parameters where the mode of the random
+  effects is degenerate or not finite stops that start instead of looping
+  forever, and the fit reports when this happened from every start or
+  when the effects of some groups have several modes at the optimum
+  (`diagnostics$multimodal_groups`). `diagnostics$cov` is the covariance of
+  the parameters outside the random effects; `diagnostics$se` covers all.
+
 * Correlated random effects, `(1 + x | group)`, are parameterised by the
   log SD of each coefficient and the Cholesky factor of their correlation
   matrix, built from canonical partial correlations (the transform of

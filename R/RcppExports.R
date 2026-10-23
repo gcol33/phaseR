@@ -21,6 +21,14 @@ phaseR_laplace_conditional <- function(laplace, theta) {
     .Call(`_phaseR_phaseR_laplace_conditional`, laplace, theta)
 }
 
+phaseR_laplace_effect_noise <- function(laplace, theta, z) {
+    .Call(`_phaseR_phaseR_laplace_effect_noise`, laplace, theta, z)
+}
+
+phaseR_laplace_multimodal <- function(laplace, theta) {
+    .Call(`_phaseR_phaseR_laplace_multimodal`, laplace, theta)
+}
+
 phaseR_density <- function(target) {
     .Call(`_phaseR_phaseR_density`, target)
 }

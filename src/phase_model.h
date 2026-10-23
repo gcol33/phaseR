@@ -109,6 +109,18 @@ public:
   // its log likelihood.
   void pointwise_log_likelihood(const double* q, double* out) const;
 
+  // Log likelihood of each unit.
+  std::vector<double> unit_log_likelihoods(const double* q) const;
+
+  // Log prior density of each random effect given its covariance
+  // parameters, indexed like the parameter vector (zero elsewhere).
+  std::vector<double> effect_log_priors(const double* q) const;
+
+  // Prior SD of each random effect given its covariance parameters (1 for
+  // the standardised effects of a correlated term), indexed like the
+  // parameter vector (zero elsewhere).
+  std::vector<double> effect_prior_sds(const double* q) const;
+
   // Log posterior at q (length dim()). Unless grad is null, writes its
   // gradient into grad (length dim()).
   template <class T>

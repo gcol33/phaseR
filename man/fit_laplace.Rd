@@ -41,10 +41,23 @@ without random effects this is the Gaussian approximation at the joint
 mode.
 }
 \details{
+Given theta the log posterior splits over blocks of effects that share no
+unit (one block per unit for unit-level effects, one block per level of a
+grouping factor nested in the units), so \code{A} is block diagonal and the
+mode of the effects is found by Newton's method from \code{u = 0} in each block
+separately. When the effects of a block have several modes given theta,
+for example unit-level effects in phases whose timing is uncertain, the
+approximation can become degenerate where two modes merge; the fit then
+stops or, if several modes remain at the optimum, warns, and the HMC
+backend is the reliable choice.
+
 The log posterior of a phase model is multimodal: a mode in which a phase
 is never entered leaves that phase's parameters at their prior. The mode
 is therefore searched from \code{n_starts} starting points built from
 provisional phase assignments (\code{\link[=initial_values]{initial_values()}}), and the start reaching
-the highest log marginal posterior is kept.
+the highest log marginal posterior is kept. With random effects, each
+start is first moved to the mode of the fixed effects with the effects at
+zero (\code{\link[=fixed_effects_mode]{fixed_effects_mode()}}), and starts that arrive at the same point
+share one search.
 }
 \keyword{internal}

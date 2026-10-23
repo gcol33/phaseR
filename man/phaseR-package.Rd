@@ -76,6 +76,15 @@ phaseR produces valid causal estimates.
 }
 }
 
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://gillescolling.com/phaseR/}
+  \item \url{https://github.com/gcol33/phaseR}
+  \item Report bugs at \url{https://github.com/gcol33/phaseR/issues}
+}
+
+}
 \author{
 \strong{Maintainer}: Gilles Colling \email{gilles.colling051@gmail.com} (\href{https://orcid.org/0000-0003-3070-6066}{ORCID})
 

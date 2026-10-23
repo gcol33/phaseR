@@ -1,5 +1,19 @@
 # phaseR (development version)
 
+* All model families evaluate their likelihood through one forward recursion
+  over the latent phases (`src/phase_process.h`) and one model description
+  (`src/phase_model.h`): K ordered phases, one logistic transition predictor
+  per consecutive pair, one dynamics predictor per phase with a Gaussian,
+  Poisson or binomial outcome, and random-effect terms on any predictor. The
+  five likelihood files that each carried their own copy of the recursion
+  are gone; log posteriors of every model kind agree with the previous code
+  to 1e-10 at fixed parameters (`tests/testthat/fixtures`).
+
+* Uncorrelated random slopes, `(1 + x || group)`, now give the effects of
+  coefficient j the prior Normal(0, sigma_j). The prior read the SD of each
+  effect from a position that moved with the effect, past the SD block and
+  past the end of the parameter vector.
+
 * `prior` now applies to every model family under both backends. The HMC
   backend, and the Laplace backend for GLM, k-phase, crossed random-effect and
   random-slope models, evaluated hard-coded priors and ignored `prior`. Both

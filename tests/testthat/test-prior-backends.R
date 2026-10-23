@@ -54,7 +54,6 @@ test_that("every model family evaluates the prior it is given", {
     sd_b <- phaseR:::prepare_stan_data(model, dat, prior_b)
     target_a <- phaseR:::posterior_target(sd_a)
     target_b <- phaseR:::posterior_target(sd_b)
-    expect_equal(target_a$kind, kind)
 
     set.seed(3)
     theta <- rnorm(sd_a$n_params, 0, 0.3)

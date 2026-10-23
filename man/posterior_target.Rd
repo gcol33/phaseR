@@ -10,14 +10,21 @@ posterior_target(stan_data)
 \item{stan_data}{Prepared data list}
 }
 \value{
-List with \code{kind} (which C++ log posterior to use), \code{n_params},
-\code{data}, \code{args} (the dimensions and random-effect structures that log
-posterior takes) and \code{prior} (the prior of each parameter class, from
-\code{\link[=prior_to_cpp]{prior_to_cpp()}})
+List with \code{kind = "phase"}, \code{n_params}, \code{n_phases}, the outcome
+\code{y}, the 0-based observation range of each unit (\code{unit_start},
+\code{unit_end}), the outcome family code and number of trials of each phase,
+the 0-based offset of the log residual SDs (\code{sigma_offset}), the linear
+predictors (\code{transitions}, \code{dynamics}; each a list with design matrix
+\code{X}, 0-based coefficient \code{offset} and random-effect terms \code{re}) and the
+prior of each parameter class (\code{prior}, from \code{\link[=prior_to_cpp]{prior_to_cpp()}})
 }
 \description{
 Both backends evaluate the log posterior through this description: the
-NUTS sampler in \code{phaseR_nuts_sampler()} and the Laplace approximation
-through \code{phaseR_log_posterior()}.
+NUTS sampler in \code{phaseR_nuts_sampler()} and the Laplace approximation.
+A model with \code{K} phases has \code{K - 1} transition linear predictors (the logit
+of moving from phase \code{k} to \code{k + 1}) and \code{K} dynamics linear predictors
+(the mean of each phase on the scale of its link). Each is a fixed-effect
+design matrix plus random-effect terms, whose parameters sit at the
+offsets of the parameter vector that \code{prepare_stan_data()} names.
 }
 \keyword{internal}

@@ -171,13 +171,7 @@ prepare_stan_data <- function(model, data, prior = NULL) {
   # Check for random slopes
   has_slopes <- trans_re$has_slopes || dyn_re_0$has_slopes || dyn_re_1$has_slopes
 
-  # Backward compatibility: single RE term info
-  n_trans_re <- if (has_trans_re) trans_re$re_list[[1]]$n_groups else 0L
-  n_dyn_re_0 <- if (has_dyn_re_0) dyn_re_0$re_list[[1]]$n_groups else 0L
-  n_dyn_re_1 <- if (has_dyn_re_1) dyn_re_1$re_list[[1]]$n_groups else 0L
-  trans_re_idx <- if (has_trans_re) trans_re$re_list[[1]]$idx else integer(0)
-  dyn_re_idx_0 <- if (has_dyn_re_0) dyn_re_0$re_list[[1]]$idx else integer(0)
-  dyn_re_idx_1 <- if (has_dyn_re_1) dyn_re_1$re_list[[1]]$idx else integer(0)
+  # Levels of the first RE term of each component
   trans_re_levels <- if (has_trans_re) trans_re$re_list[[1]]$levels else character(0)
   dyn_re_levels_0 <- if (has_dyn_re_0) dyn_re_0$re_list[[1]]$levels else character(0)
   dyn_re_levels_1 <- if (has_dyn_re_1) dyn_re_1$re_list[[1]]$levels else character(0)
@@ -255,12 +249,6 @@ prepare_stan_data <- function(model, data, prior = NULL) {
     has_trans_re = has_trans_re,
     has_dyn_re_0 = has_dyn_re_0,
     has_dyn_re_1 = has_dyn_re_1,
-    n_trans_re = n_trans_re,
-    n_dyn_re_0 = n_dyn_re_0,
-    n_dyn_re_1 = n_dyn_re_1,
-    trans_re_idx = trans_re_idx,
-    dyn_re_idx_0 = dyn_re_idx_0,
-    dyn_re_idx_1 = dyn_re_idx_1,
     trans_re_levels = trans_re_levels,
     dyn_re_levels_0 = dyn_re_levels_0,
     dyn_re_levels_1 = dyn_re_levels_1,

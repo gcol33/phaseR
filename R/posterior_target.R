@@ -1,136 +1,88 @@
 #' Describe the log posterior of a phase model
 #'
 #' Both backends evaluate the log posterior through this description: the
-#' NUTS sampler in `phaseR_nuts_sampler()` and the Laplace approximation
-#' through `phaseR_log_posterior()`.
+#' NUTS sampler in `phaseR_nuts_sampler()` and the Laplace approximation.
+#' A model with `K` phases has `K - 1` transition linear predictors (the logit
+#' of moving from phase `k` to `k + 1`) and `K` dynamics linear predictors
+#' (the mean of each phase on the scale of its link). Each is a fixed-effect
+#' design matrix plus random-effect terms, whose parameters sit at the
+#' offsets of the parameter vector that `prepare_stan_data()` names.
 #'
 #' @param stan_data Prepared data list
-#' @return List with `kind` (which C++ log posterior to use), `n_params`,
-#'   `data`, `args` (the dimensions and random-effect structures that log
-#'   posterior takes) and `prior` (the prior of each parameter class, from
-#'   [prior_to_cpp()])
+#' @return List with `kind = "phase"`, `n_params`, `n_phases`, the outcome
+#'   `y`, the 0-based observation range of each unit (`unit_start`,
+#'   `unit_end`), the outcome family code and number of trials of each phase,
+#'   the 0-based offset of the log residual SDs (`sigma_offset`), the linear
+#'   predictors (`transitions`, `dynamics`; each a list with design matrix
+#'   `X`, 0-based coefficient `offset` and random-effect terms `re`) and the
+#'   prior of each parameter class (`prior`, from [prior_to_cpp()])
 #' @keywords internal
 posterior_target <- function(stan_data) {
 
-  base_data <- list(
-    id = stan_data$id,
-    time = stan_data$time,
-    y = stan_data$y,
-    n_units = stan_data$n_units,
-    unit_start = stan_data$unit_start,
-    unit_end = stan_data$unit_end
-  )
-  two_phase_data <- c(base_data, list(X_trans = stan_data$X_trans,
-                                      X_dyn_0 = stan_data$X_dyn_0,
-                                      X_dyn_1 = stan_data$X_dyn_1))
-  dims <- list(
-    n_trans_coef = stan_data$n_trans_coef,
-    n_dyn_coef_0 = stan_data$n_dyn_coef_0,
-    n_dyn_coef_1 = stan_data$n_dyn_coef_1
-  )
-  re_info <- function() {
-    list(
-      trans_re_info = build_re_info_for_cpp(stan_data$trans_re_multi),
-      dyn_re_info_0 = build_re_info_for_cpp(stan_data$dyn_re_multi_0),
-      dyn_re_info_1 = build_re_info_for_cpp(stan_data$dyn_re_multi_1)
+  k <- stan_data$k_phases
+  if (k > 2) {
+    X_trans <- stan_data$X_trans_list
+    X_dyn <- stan_data$X_dyn_list
+    family <- rep(0L, k)
+    re <- rep(list(NULL), 2L * k - 1L)
+  } else {
+    X_trans <- list(stan_data$X_trans)
+    X_dyn <- list(stan_data$X_dyn_0, stan_data$X_dyn_1)
+    family <- c(stan_data$family_0, stan_data$family_1)
+    re <- list(stan_data$trans_re_multi, stan_data$dyn_re_multi_0,
+               stan_data$dyn_re_multi_1)
+  }
+
+  unit_size <- stan_data$unit_end - stan_data$unit_start + 1L
+  unit_first_obs <- rep(stan_data$unit_start + 1L, unit_size)
+
+  offset <- 0L
+  predictor <- function(X) {
+    out <- list(X = X, offset = offset, re = list())
+    offset <<- offset + ncol(X)
+    out
+  }
+  predictors <- lapply(c(X_trans, X_dyn), predictor)
+  sigma_offset <- offset
+  offset <- offset + k
+
+  re_term <- function(term) {
+    kind <- if (term$n_coefs == 1L) 0L else if (term$correlated) 2L else 1L
+    n_hyper <- switch(kind + 1L, 1L, term$n_coefs,
+                      (term$n_coefs * (term$n_coefs + 1L)) %/% 2L)
+    out <- list(
+      kind = kind,
+      n_groups = as.integer(term$n_groups),
+      n_coefs = as.integer(term$n_coefs),
+      offset = offset,
+      group = as.integer(term$idx[unit_first_obs]) - 1L,
+      Z = if (term$n_coefs > 1L) term$Z else NULL
     )
+    offset <<- offset + term$n_groups * term$n_coefs + n_hyper
+    out
   }
-  target <- function(kind, data, args) {
-    list(kind = kind, n_params = as.integer(stan_data$n_params),
-         data = data, args = args, prior = stan_data$prior_cpp)
-  }
-
-  if (stan_data$k_phases > 2) {
-    return(target(
-      "k_phase",
-      c(base_data, list(X_trans_list = stan_data$X_trans_list,
-                        X_dyn_list = stan_data$X_dyn_list)),
-      list(n_dyn_coef = as.integer(stan_data$n_dyn_coef),
-           n_trans_coef = as.integer(stan_data$n_trans_coef),
-           k_phases = as.integer(stan_data$k_phases))
-    ))
-  }
-
-  if (isTRUE(stan_data$is_glm)) {
-    return(target(
-      "glm", two_phase_data,
-      c(dims, list(family_0 = stan_data$family_0,
-                   family_1 = stan_data$family_1,
-                   n_trials_0 = stan_data$n_trials_0,
-                   n_trials_1 = stan_data$n_trials_1))
-    ))
-  }
-
-  if (isTRUE(stan_data$has_re)) {
-    if (isTRUE(stan_data$has_slopes)) {
-      return(target("slopes", two_phase_data, c(dims, re_info())))
+  for (c in seq_along(predictors)) {
+    if (!is.null(re[[c]]) && re[[c]]$n_re_terms > 0) {
+      predictors[[c]]$re <- lapply(unname(re[[c]]$re_list), re_term)
     }
-    has_multi_re <- (stan_data$trans_re_multi$n_re_terms > 1) ||
-                    (stan_data$dyn_re_multi_0$n_re_terms > 1) ||
-                    (stan_data$dyn_re_multi_1$n_re_terms > 1)
-    if (has_multi_re) {
-      return(target("multi_re", two_phase_data, c(dims, re_info())))
-    }
-    return(target(
-      "re",
-      c(two_phase_data, list(trans_re_idx = stan_data$trans_re_idx,
-                             dyn_re_idx_0 = stan_data$dyn_re_idx_0,
-                             dyn_re_idx_1 = stan_data$dyn_re_idx_1)),
-      c(dims, list(n_trans_re = stan_data$n_trans_re,
-                   n_dyn_re_0 = stan_data$n_dyn_re_0,
-                   n_dyn_re_1 = stan_data$n_dyn_re_1,
-                   has_trans_re = stan_data$has_trans_re,
-                   has_dyn_re_0 = stan_data$has_dyn_re_0,
-                   has_dyn_re_1 = stan_data$has_dyn_re_1))
-    ))
   }
-
-  target("two_phase", two_phase_data, dims)
-}
-
-
-#' Build RE info structure for C++
-#'
-#' Converts R multi-RE structure to format expected by C++ sampler
-#'
-#' @param re_multi Multi-RE structure from build_multi_re()
-#' @return List with n_terms, n_groups_vec, idx_list, and slope info
-#' @keywords internal
-build_re_info_for_cpp <- function(re_multi) {
-  n_terms <- re_multi$n_re_terms
-
-  if (n_terms == 0) {
-    return(list(
-      n_terms = 0L,
-      n_groups_vec = integer(0),
-      n_coefs_vec = integer(0),
-      idx_list = list(),
-      Z_list = list(),
-      correlated_vec = logical(0),
-      has_slopes = FALSE
-    ))
+  if (offset != stan_data$n_params) {
+    stop("The model reads ", offset, " parameters but names ",
+         stan_data$n_params, ".", call. = FALSE)
   }
-
-  n_groups_vec <- vapply(re_multi$re_list, function(x) x$n_groups, integer(1))
-  n_coefs_vec <- vapply(re_multi$re_list, function(x) x$n_coefs, integer(1))
-  idx_list <- lapply(re_multi$re_list, function(x) x$idx)
-  Z_list <- lapply(re_multi$re_list, function(x) {
-    if (is.null(x$Z)) {
-      # For intercept-only, create a matrix of 1s (will be ignored but needed)
-      NULL
-    } else {
-      x$Z
-    }
-  })
-  correlated_vec <- vapply(re_multi$re_list, function(x) x$correlated, logical(1))
 
   list(
-    n_terms = as.integer(n_terms),
-    n_groups_vec = as.integer(n_groups_vec),
-    n_coefs_vec = as.integer(n_coefs_vec),
-    idx_list = idx_list,
-    Z_list = Z_list,
-    correlated_vec = correlated_vec,
-    has_slopes = re_multi$has_slopes
+    kind = "phase",
+    n_params = as.integer(stan_data$n_params),
+    n_phases = as.integer(k),
+    y = as.numeric(stan_data$y),
+    unit_start = as.integer(stan_data$unit_start),
+    unit_end = as.integer(stan_data$unit_end),
+    family = as.integer(family),
+    n_trials = rep(1L, k),
+    sigma_offset = sigma_offset,
+    transitions = predictors[seq_len(k - 1L)],
+    dynamics = predictors[k - 1L + seq_len(k)],
+    prior = stan_data$prior_cpp
   )
 }

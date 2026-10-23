@@ -41,6 +41,4 @@ Applied researchers (ecology, epidemiology, economics, psychology, medicine) who
 - vignette estimand-failure: A1
 
 ## Open
-- The HMC samplers in src/hmc_sampler*.cpp are named `phaseR_nuts_sampler*` but run fixed-length leapfrog trajectories ("simplified, not full NUTS"); the README says Hamiltonian Monte Carlo.
-- The samplers seed from `std::random_device`, so `seed` does not make HMC fits reproducible.
 - No pkgdown site; the vignette is linked by its repository path.

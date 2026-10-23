@@ -4,7 +4,17 @@
 \alias{fit_hmc}
 \title{HMC backend for phase models}
 \usage{
-fit_hmc(stan_data, chains, iter, warmup, cores, seed, ...)
+fit_hmc(
+  stan_data,
+  chains,
+  iter,
+  warmup,
+  cores,
+  seed,
+  adapt_delta = 0.8,
+  max_treedepth = 10L,
+  ...
+)
 }
 \arguments{
 \item{stan_data}{Prepared data list}
@@ -20,12 +30,19 @@ fit_hmc(stan_data, chains, iter, warmup, cores, seed, ...)
 \item{seed}{Integer seed; chain \code{c} samples from the stream seeded by
 \verb{(seed, c)}, which also draws its initial values}
 
-\item{...}{Additional HMC parameters}
+\item{adapt_delta}{Target average acceptance statistic of the step-size
+adaptation, in (0, 1)}
+
+\item{max_treedepth}{Maximum tree depth; a transition takes at most
+\code{2^max_treedepth - 1} leapfrog steps}
+
+\item{...}{Unused}
 }
 \value{
 Raw fit object
 }
 \description{
-HMC backend for phase models
+Runs the No-U-Turn sampler on the log posterior of the model, one chain
+after another or in parallel.
 }
 \keyword{internal}

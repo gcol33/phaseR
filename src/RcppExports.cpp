@@ -11,142 +11,19 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // phaseR_nuts_sampler
-List phaseR_nuts_sampler(List data, int n_params, int seed, int chain, int n_iter, int n_warmup, int n_trans_coef, int n_dyn_coef_0, int n_dyn_coef_1, double target_accept, int max_treedepth);
-RcppExport SEXP _phaseR_phaseR_nuts_sampler(SEXP dataSEXP, SEXP n_paramsSEXP, SEXP seedSEXP, SEXP chainSEXP, SEXP n_iterSEXP, SEXP n_warmupSEXP, SEXP n_trans_coefSEXP, SEXP n_dyn_coef_0SEXP, SEXP n_dyn_coef_1SEXP, SEXP target_acceptSEXP, SEXP max_treedepthSEXP) {
+List phaseR_nuts_sampler(List target, int n_iter, int n_warmup, int seed, int chain, double adapt_delta, int max_treedepth);
+RcppExport SEXP _phaseR_phaseR_nuts_sampler(SEXP targetSEXP, SEXP n_iterSEXP, SEXP n_warmupSEXP, SEXP seedSEXP, SEXP chainSEXP, SEXP adapt_deltaSEXP, SEXP max_treedepthSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< List >::type data(dataSEXP);
-    Rcpp::traits::input_parameter< int >::type n_params(n_paramsSEXP);
-    Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
-    Rcpp::traits::input_parameter< int >::type chain(chainSEXP);
+    Rcpp::traits::input_parameter< List >::type target(targetSEXP);
     Rcpp::traits::input_parameter< int >::type n_iter(n_iterSEXP);
     Rcpp::traits::input_parameter< int >::type n_warmup(n_warmupSEXP);
-    Rcpp::traits::input_parameter< int >::type n_trans_coef(n_trans_coefSEXP);
-    Rcpp::traits::input_parameter< int >::type n_dyn_coef_0(n_dyn_coef_0SEXP);
-    Rcpp::traits::input_parameter< int >::type n_dyn_coef_1(n_dyn_coef_1SEXP);
-    Rcpp::traits::input_parameter< double >::type target_accept(target_acceptSEXP);
+    Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
+    Rcpp::traits::input_parameter< int >::type chain(chainSEXP);
+    Rcpp::traits::input_parameter< double >::type adapt_delta(adapt_deltaSEXP);
     Rcpp::traits::input_parameter< int >::type max_treedepth(max_treedepthSEXP);
-    rcpp_result_gen = Rcpp::wrap(phaseR_nuts_sampler(data, n_params, seed, chain, n_iter, n_warmup, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, target_accept, max_treedepth));
-    return rcpp_result_gen;
-END_RCPP
-}
-// phaseR_nuts_sampler_re
-List phaseR_nuts_sampler_re(List data, int n_params, int seed, int chain, int n_iter, int n_warmup, int n_trans_coef, int n_dyn_coef_0, int n_dyn_coef_1, int n_trans_re, int n_dyn_re_0, int n_dyn_re_1, bool has_trans_re, bool has_dyn_re_0, bool has_dyn_re_1, double target_accept, int max_treedepth);
-RcppExport SEXP _phaseR_phaseR_nuts_sampler_re(SEXP dataSEXP, SEXP n_paramsSEXP, SEXP seedSEXP, SEXP chainSEXP, SEXP n_iterSEXP, SEXP n_warmupSEXP, SEXP n_trans_coefSEXP, SEXP n_dyn_coef_0SEXP, SEXP n_dyn_coef_1SEXP, SEXP n_trans_reSEXP, SEXP n_dyn_re_0SEXP, SEXP n_dyn_re_1SEXP, SEXP has_trans_reSEXP, SEXP has_dyn_re_0SEXP, SEXP has_dyn_re_1SEXP, SEXP target_acceptSEXP, SEXP max_treedepthSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< List >::type data(dataSEXP);
-    Rcpp::traits::input_parameter< int >::type n_params(n_paramsSEXP);
-    Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
-    Rcpp::traits::input_parameter< int >::type chain(chainSEXP);
-    Rcpp::traits::input_parameter< int >::type n_iter(n_iterSEXP);
-    Rcpp::traits::input_parameter< int >::type n_warmup(n_warmupSEXP);
-    Rcpp::traits::input_parameter< int >::type n_trans_coef(n_trans_coefSEXP);
-    Rcpp::traits::input_parameter< int >::type n_dyn_coef_0(n_dyn_coef_0SEXP);
-    Rcpp::traits::input_parameter< int >::type n_dyn_coef_1(n_dyn_coef_1SEXP);
-    Rcpp::traits::input_parameter< int >::type n_trans_re(n_trans_reSEXP);
-    Rcpp::traits::input_parameter< int >::type n_dyn_re_0(n_dyn_re_0SEXP);
-    Rcpp::traits::input_parameter< int >::type n_dyn_re_1(n_dyn_re_1SEXP);
-    Rcpp::traits::input_parameter< bool >::type has_trans_re(has_trans_reSEXP);
-    Rcpp::traits::input_parameter< bool >::type has_dyn_re_0(has_dyn_re_0SEXP);
-    Rcpp::traits::input_parameter< bool >::type has_dyn_re_1(has_dyn_re_1SEXP);
-    Rcpp::traits::input_parameter< double >::type target_accept(target_acceptSEXP);
-    Rcpp::traits::input_parameter< int >::type max_treedepth(max_treedepthSEXP);
-    rcpp_result_gen = Rcpp::wrap(phaseR_nuts_sampler_re(data, n_params, seed, chain, n_iter, n_warmup, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, n_trans_re, n_dyn_re_0, n_dyn_re_1, has_trans_re, has_dyn_re_0, has_dyn_re_1, target_accept, max_treedepth));
-    return rcpp_result_gen;
-END_RCPP
-}
-// phaseR_nuts_sampler_glm
-List phaseR_nuts_sampler_glm(List data, int n_params, int seed, int chain, int n_iter, int n_warmup, int n_trans_coef, int n_dyn_coef_0, int n_dyn_coef_1, int family_0, int family_1, int n_trials_0, int n_trials_1, double target_accept, int max_treedepth);
-RcppExport SEXP _phaseR_phaseR_nuts_sampler_glm(SEXP dataSEXP, SEXP n_paramsSEXP, SEXP seedSEXP, SEXP chainSEXP, SEXP n_iterSEXP, SEXP n_warmupSEXP, SEXP n_trans_coefSEXP, SEXP n_dyn_coef_0SEXP, SEXP n_dyn_coef_1SEXP, SEXP family_0SEXP, SEXP family_1SEXP, SEXP n_trials_0SEXP, SEXP n_trials_1SEXP, SEXP target_acceptSEXP, SEXP max_treedepthSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< List >::type data(dataSEXP);
-    Rcpp::traits::input_parameter< int >::type n_params(n_paramsSEXP);
-    Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
-    Rcpp::traits::input_parameter< int >::type chain(chainSEXP);
-    Rcpp::traits::input_parameter< int >::type n_iter(n_iterSEXP);
-    Rcpp::traits::input_parameter< int >::type n_warmup(n_warmupSEXP);
-    Rcpp::traits::input_parameter< int >::type n_trans_coef(n_trans_coefSEXP);
-    Rcpp::traits::input_parameter< int >::type n_dyn_coef_0(n_dyn_coef_0SEXP);
-    Rcpp::traits::input_parameter< int >::type n_dyn_coef_1(n_dyn_coef_1SEXP);
-    Rcpp::traits::input_parameter< int >::type family_0(family_0SEXP);
-    Rcpp::traits::input_parameter< int >::type family_1(family_1SEXP);
-    Rcpp::traits::input_parameter< int >::type n_trials_0(n_trials_0SEXP);
-    Rcpp::traits::input_parameter< int >::type n_trials_1(n_trials_1SEXP);
-    Rcpp::traits::input_parameter< double >::type target_accept(target_acceptSEXP);
-    Rcpp::traits::input_parameter< int >::type max_treedepth(max_treedepthSEXP);
-    rcpp_result_gen = Rcpp::wrap(phaseR_nuts_sampler_glm(data, n_params, seed, chain, n_iter, n_warmup, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, family_0, family_1, n_trials_0, n_trials_1, target_accept, max_treedepth));
-    return rcpp_result_gen;
-END_RCPP
-}
-// phaseR_nuts_sampler_k
-List phaseR_nuts_sampler_k(List data, int n_params, int seed, int chain, int n_iter, int n_warmup, IntegerVector n_dyn_coef, IntegerVector n_trans_coef, int k_phases, double target_accept, int max_treedepth);
-RcppExport SEXP _phaseR_phaseR_nuts_sampler_k(SEXP dataSEXP, SEXP n_paramsSEXP, SEXP seedSEXP, SEXP chainSEXP, SEXP n_iterSEXP, SEXP n_warmupSEXP, SEXP n_dyn_coefSEXP, SEXP n_trans_coefSEXP, SEXP k_phasesSEXP, SEXP target_acceptSEXP, SEXP max_treedepthSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< List >::type data(dataSEXP);
-    Rcpp::traits::input_parameter< int >::type n_params(n_paramsSEXP);
-    Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
-    Rcpp::traits::input_parameter< int >::type chain(chainSEXP);
-    Rcpp::traits::input_parameter< int >::type n_iter(n_iterSEXP);
-    Rcpp::traits::input_parameter< int >::type n_warmup(n_warmupSEXP);
-    Rcpp::traits::input_parameter< IntegerVector >::type n_dyn_coef(n_dyn_coefSEXP);
-    Rcpp::traits::input_parameter< IntegerVector >::type n_trans_coef(n_trans_coefSEXP);
-    Rcpp::traits::input_parameter< int >::type k_phases(k_phasesSEXP);
-    Rcpp::traits::input_parameter< double >::type target_accept(target_acceptSEXP);
-    Rcpp::traits::input_parameter< int >::type max_treedepth(max_treedepthSEXP);
-    rcpp_result_gen = Rcpp::wrap(phaseR_nuts_sampler_k(data, n_params, seed, chain, n_iter, n_warmup, n_dyn_coef, n_trans_coef, k_phases, target_accept, max_treedepth));
-    return rcpp_result_gen;
-END_RCPP
-}
-// phaseR_nuts_sampler_multi_re
-List phaseR_nuts_sampler_multi_re(List data, int n_params, int seed, int chain, int n_iter, int n_warmup, int n_trans_coef, int n_dyn_coef_0, int n_dyn_coef_1, List trans_re_info, List dyn_re_info_0, List dyn_re_info_1, double target_accept, int max_treedepth);
-RcppExport SEXP _phaseR_phaseR_nuts_sampler_multi_re(SEXP dataSEXP, SEXP n_paramsSEXP, SEXP seedSEXP, SEXP chainSEXP, SEXP n_iterSEXP, SEXP n_warmupSEXP, SEXP n_trans_coefSEXP, SEXP n_dyn_coef_0SEXP, SEXP n_dyn_coef_1SEXP, SEXP trans_re_infoSEXP, SEXP dyn_re_info_0SEXP, SEXP dyn_re_info_1SEXP, SEXP target_acceptSEXP, SEXP max_treedepthSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< List >::type data(dataSEXP);
-    Rcpp::traits::input_parameter< int >::type n_params(n_paramsSEXP);
-    Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
-    Rcpp::traits::input_parameter< int >::type chain(chainSEXP);
-    Rcpp::traits::input_parameter< int >::type n_iter(n_iterSEXP);
-    Rcpp::traits::input_parameter< int >::type n_warmup(n_warmupSEXP);
-    Rcpp::traits::input_parameter< int >::type n_trans_coef(n_trans_coefSEXP);
-    Rcpp::traits::input_parameter< int >::type n_dyn_coef_0(n_dyn_coef_0SEXP);
-    Rcpp::traits::input_parameter< int >::type n_dyn_coef_1(n_dyn_coef_1SEXP);
-    Rcpp::traits::input_parameter< List >::type trans_re_info(trans_re_infoSEXP);
-    Rcpp::traits::input_parameter< List >::type dyn_re_info_0(dyn_re_info_0SEXP);
-    Rcpp::traits::input_parameter< List >::type dyn_re_info_1(dyn_re_info_1SEXP);
-    Rcpp::traits::input_parameter< double >::type target_accept(target_acceptSEXP);
-    Rcpp::traits::input_parameter< int >::type max_treedepth(max_treedepthSEXP);
-    rcpp_result_gen = Rcpp::wrap(phaseR_nuts_sampler_multi_re(data, n_params, seed, chain, n_iter, n_warmup, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, trans_re_info, dyn_re_info_0, dyn_re_info_1, target_accept, max_treedepth));
-    return rcpp_result_gen;
-END_RCPP
-}
-// phaseR_nuts_sampler_slopes
-List phaseR_nuts_sampler_slopes(List data, int n_params, int seed, int chain, int n_iter, int n_warmup, int n_trans_coef, int n_dyn_coef_0, int n_dyn_coef_1, List trans_re_info, List dyn_re_info_0, List dyn_re_info_1);
-RcppExport SEXP _phaseR_phaseR_nuts_sampler_slopes(SEXP dataSEXP, SEXP n_paramsSEXP, SEXP seedSEXP, SEXP chainSEXP, SEXP n_iterSEXP, SEXP n_warmupSEXP, SEXP n_trans_coefSEXP, SEXP n_dyn_coef_0SEXP, SEXP n_dyn_coef_1SEXP, SEXP trans_re_infoSEXP, SEXP dyn_re_info_0SEXP, SEXP dyn_re_info_1SEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< List >::type data(dataSEXP);
-    Rcpp::traits::input_parameter< int >::type n_params(n_paramsSEXP);
-    Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
-    Rcpp::traits::input_parameter< int >::type chain(chainSEXP);
-    Rcpp::traits::input_parameter< int >::type n_iter(n_iterSEXP);
-    Rcpp::traits::input_parameter< int >::type n_warmup(n_warmupSEXP);
-    Rcpp::traits::input_parameter< int >::type n_trans_coef(n_trans_coefSEXP);
-    Rcpp::traits::input_parameter< int >::type n_dyn_coef_0(n_dyn_coef_0SEXP);
-    Rcpp::traits::input_parameter< int >::type n_dyn_coef_1(n_dyn_coef_1SEXP);
-    Rcpp::traits::input_parameter< List >::type trans_re_info(trans_re_infoSEXP);
-    Rcpp::traits::input_parameter< List >::type dyn_re_info_0(dyn_re_info_0SEXP);
-    Rcpp::traits::input_parameter< List >::type dyn_re_info_1(dyn_re_info_1SEXP);
-    rcpp_result_gen = Rcpp::wrap(phaseR_nuts_sampler_slopes(data, n_params, seed, chain, n_iter, n_warmup, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, trans_re_info, dyn_re_info_0, dyn_re_info_1));
+    rcpp_result_gen = Rcpp::wrap(phaseR_nuts_sampler(target, n_iter, n_warmup, seed, chain, adapt_delta, max_treedepth));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -552,12 +429,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_phaseR_phaseR_nuts_sampler", (DL_FUNC) &_phaseR_phaseR_nuts_sampler, 11},
-    {"_phaseR_phaseR_nuts_sampler_re", (DL_FUNC) &_phaseR_phaseR_nuts_sampler_re, 17},
-    {"_phaseR_phaseR_nuts_sampler_glm", (DL_FUNC) &_phaseR_phaseR_nuts_sampler_glm, 15},
-    {"_phaseR_phaseR_nuts_sampler_k", (DL_FUNC) &_phaseR_phaseR_nuts_sampler_k, 11},
-    {"_phaseR_phaseR_nuts_sampler_multi_re", (DL_FUNC) &_phaseR_phaseR_nuts_sampler_multi_re, 14},
-    {"_phaseR_phaseR_nuts_sampler_slopes", (DL_FUNC) &_phaseR_phaseR_nuts_sampler_slopes, 12},
+    {"_phaseR_phaseR_nuts_sampler", (DL_FUNC) &_phaseR_phaseR_nuts_sampler, 7},
     {"_phaseR_phase_log_likelihood", (DL_FUNC) &_phaseR_phase_log_likelihood, 5},
     {"_phaseR_phase_log_prior", (DL_FUNC) &_phaseR_phase_log_prior, 4},
     {"_phaseR_phase_log_posterior", (DL_FUNC) &_phaseR_phase_log_posterior, 5},

@@ -45,9 +45,9 @@ your question. phaseR supports:
   leave-one-out cross-validation by Pareto-smoothed importance sampling
   with `loo()` and `loo_compare()`.
 
-The default backend is a Hamiltonian Monte Carlo sampler written in C++
-with Rcpp, so no Stan, JAGS or other inference engine has to be
-installed. [Why Conditioning on Realized Change
+The default backend is the No-U-Turn sampler (NUTS), an adaptive
+Hamiltonian Monte Carlo method, written in C++ with Rcpp, so no Stan,
+JAGS or other inference engine has to be installed. [Why Conditioning on Realized Change
 Fails](vignettes/estimand-failure.Rmd) runs the before/after estimate
 and the phaseR estimate against a known truth on simulated data.
 
@@ -133,7 +133,7 @@ summary(fit)
 
 `backend = "laplace"` approximates the posterior by a Gaussian at its
 mode and returns within a second. The default backend, `"hmc"`, samples
-the posterior with Hamiltonian Monte Carlo, and `chains` and `iter` set
+the posterior with the No-U-Turn sampler, and `chains` and `iter` set
 the number of chains and the iterations per chain:
 
 ``` r

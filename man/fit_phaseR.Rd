@@ -28,7 +28,9 @@ fit_phaseR(
 
 \item{warmup}{Warmup iterations per chain (default iter/2)}
 
-\item{backend}{Estimation backend: "hmc" (default) or "laplace"}
+\item{backend}{Estimation backend: "hmc" (default), the No-U-Turn sampler
+with step-size and diagonal-metric adaptation during warmup, or
+"laplace", a Gaussian approximation at the posterior mode}
 
 \item{cores}{Number of cores for parallel chains (default 1)}
 
@@ -39,7 +41,10 @@ return identical draws. With \code{seed = NULL} the seed is drawn from R's
 random number generator, so \code{set.seed()} before the call makes the fit
 reproducible; the seed used is stored in the returned object as \code{seed}.}
 
-\item{...}{Additional arguments passed to backend}
+\item{...}{Backend settings. For \code{backend = "hmc"}: \code{adapt_delta}, the target
+acceptance statistic of step-size adaptation (default 0.8; raise it
+towards 1 when there are divergent transitions), and \code{max_treedepth}
+(default 10). For \code{backend = "laplace"}: \code{n_samples} (default 1000).}
 }
 \value{
 A \code{phase_fit} object

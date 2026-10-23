@@ -6,7 +6,18 @@
 \usage{
 compute_ess(draws, chain_id)
 }
+\arguments{
+\item{draws}{Matrix of draws, one column per parameter}
+
+\item{chain_id}{Chain of each row of \code{draws}}
+}
+\value{
+Numeric vector of effective sample sizes, one per column
+}
 \description{
-Compute effective sample size
+Multi-chain effective sample size of Geyer's initial monotone sequence
+estimator, as in Stan: autocovariances are averaged over chains, combined
+with the between-chain variance, and summed in pairs of lags until a pair
+turns negative.
 }
 \keyword{internal}

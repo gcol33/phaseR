@@ -11,6 +11,8 @@ print.phase_fit <- function(x, ...) {
 
   if (x$backend == "hmc" && !is.null(x$diagnostics)) {
     cat(sprintf("  Divergences: %d\n", x$diagnostics$n_divergent))
+    cat(sprintf("  Transitions at max tree depth: %d\n",
+                x$diagnostics$n_max_treedepth))
   }
 
   cat("\nUse summary() for parameter estimates, plot() for diagnostics.\n")
@@ -192,28 +194,51 @@ compute_rhat <- function(draws, chain_id) {
 
 
 #' Compute effective sample size
+#'
+#' Multi-chain effective sample size of Geyer's initial monotone sequence
+#' estimator, as in Stan: autocovariances are averaged over chains, combined
+#' with the between-chain variance, and summed in pairs of lags until a pair
+#' turns negative.
+#'
+#' @param draws Matrix of draws, one column per parameter
+#' @param chain_id Chain of each row of `draws`
+#' @return Numeric vector of effective sample sizes, one per column
 #' @keywords internal
 compute_ess <- function(draws, chain_id) {
+  draws <- as.matrix(draws)
+  apply(draws, 2, ess_geyer, chain_id = chain_id)
+}
 
-  n_params <- ncol(draws)
-  n_total <- nrow(draws)
 
-  ess <- numeric(n_params)
+#' Effective sample size of one parameter
+#' @keywords internal
+ess_geyer <- function(x, chain_id) {
+  chains <- split(x, chain_id)
+  m <- length(chains)
+  n <- min(lengths(chains))
+  if (n < 4) return(NA_real_)
+  X <- vapply(chains, function(v) v[seq_len(n)], numeric(n))
+  acov <- apply(X, 2, function(v) {
+    stats::acf(v, lag.max = n - 1, type = "covariance", demean = TRUE,
+               plot = FALSE)$acf[, 1, 1]
+  })
+  mean_var <- mean(acov[1, ]) * n / (n - 1)
+  var_plus <- mean_var * (n - 1) / n
+  if (m > 1) var_plus <- var_plus + stats::var(colMeans(X))
+  if (!is.finite(var_plus) || var_plus <= 0) return(NA_real_)
 
-  for (j in seq_len(n_params)) {
-    # Simple ESS based on autocorrelation
-    x <- draws[, j]
-    ac <- acf(x, plot = FALSE, lag.max = min(100, n_total / 2))$acf[-1]
-
-    # Find cutoff where autocorrelation goes negative
-    cutoff <- which(ac < 0)[1]
-    if (is.na(cutoff)) cutoff <- length(ac)
-
-    rho_sum <- sum(ac[seq_len(cutoff - 1)])
-    ess[j] <- n_total / (1 + 2 * rho_sum)
+  rho <- 1 - (mean_var - rowMeans(acov)) / var_plus
+  rho[1] <- 1
+  pair_sums <- numeric(0)
+  t <- 1
+  while (t + 1 <= n) {
+    p <- rho[t] + rho[t + 1]
+    if (p <= 0) break
+    pair_sums <- c(pair_sums, p)
+    t <- t + 2
   }
-
-  pmax(1, round(ess))
+  tau <- -1 + 2 * sum(cummin(pair_sums))
+  m * n / max(tau, 1 / log10(m * n))
 }
 
 

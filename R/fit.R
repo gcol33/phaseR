@@ -5,14 +5,19 @@
 #' @param chains Number of MCMC chains (default 4)
 #' @param iter Total iterations per chain (default 2000)
 #' @param warmup Warmup iterations per chain (default iter/2)
-#' @param backend Estimation backend: "hmc" (default) or "laplace"
+#' @param backend Estimation backend: "hmc" (default), the No-U-Turn sampler
+#'   with step-size and diagonal-metric adaptation during warmup, or
+#'   "laplace", a Gaussian approximation at the posterior mode
 #' @param cores Number of cores for parallel chains (default 1)
 #' @param prior Prior specification from `prior()` (default: weakly informative)
 #' @param seed Integer seed. Two fits with the same `seed`, data and settings
 #'   return identical draws. With `seed = NULL` the seed is drawn from R's
 #'   random number generator, so `set.seed()` before the call makes the fit
 #'   reproducible; the seed used is stored in the returned object as `seed`.
-#' @param ... Additional arguments passed to backend
+#' @param ... Backend settings. For `backend = "hmc"`: `adapt_delta`, the target
+#'   acceptance statistic of step-size adaptation (default 0.8; raise it
+#'   towards 1 when there are divergent transitions), and `max_treedepth`
+#'   (default 10). For `backend = "laplace"`: `n_samples` (default 1000).
 #'
 #' @return A `phase_fit` object
 #' @export

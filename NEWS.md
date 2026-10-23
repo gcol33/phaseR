@@ -1,5 +1,17 @@
 # phaseR (development version)
 
+* The HMC backend is the No-U-Turn sampler (Hoffman and Gelman 2014) in
+  Stan's multinomial form, replacing fixed-length leapfrog trajectories:
+  trajectories double until a U-turn, a divergence or `max_treedepth`, and
+  warmup adapts the step size by dual averaging and a diagonal metric from
+  the posterior variance in expanding windows. `adapt_delta` and
+  `max_treedepth` are passed through `...` of `fit_phaseR()`. One sampler
+  now serves every model family. Fits report divergences after warmup,
+  transitions at maximum tree depth, E-BFMI and the adapted metric.
+
+* `summary()` computes the effective sample size with Stan's multi-chain
+  initial monotone sequence estimator.
+
 * `fit_phaseR()` honours `seed` with the HMC backend: each chain samples from a
   stream seeded by `(seed, chain)` that also draws its initial values, so two
   fits with the same seed return identical draws. With `seed = NULL` the seed is

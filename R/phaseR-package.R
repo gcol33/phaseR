@@ -34,7 +34,7 @@
 #'
 #' **Fitting:**
 #' \itemize{
-#'   \item \code{\link{fit_phaseR}}: Fit the model via HMC
+#'   \item \code{\link{fit_phaseR}}: Fit the model with the No-U-Turn sampler or a Laplace approximation
 #' }
 #'
 #' **Inference:**

@@ -1,3 +1,11 @@
+# phaseR (development version)
+
+* `fit_phaseR()` honours `seed` with the HMC backend: each chain samples from a
+  stream seeded by `(seed, chain)` that also draws its initial values, so two
+  fits with the same seed return identical draws. With `seed = NULL` the seed is
+  drawn from R's random number generator, so `set.seed()` makes fits
+  reproducible, and the seed used is stored in the fit as `fit$seed`.
+
 # phaseR 0.8.0
 
 Experimental release with feature parity to ratiod.

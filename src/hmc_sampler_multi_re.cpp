@@ -1,6 +1,6 @@
 #include <Rcpp.h>
 #include <cmath>
-#include <random>
+#include "rng.h"
 
 using namespace Rcpp;
 
@@ -78,7 +78,9 @@ void leapfrog_step_multi_re(
 // [[Rcpp::export]]
 List phaseR_nuts_sampler_multi_re(
     List data,
-    NumericVector init,
+    int n_params,
+    int seed,
+    int chain,
     int n_iter,
     int n_warmup,
     int n_trans_coef,
@@ -90,16 +92,12 @@ List phaseR_nuts_sampler_multi_re(
     double target_accept = 0.8,
     int max_treedepth = 10
 ) {
-  int n_params = init.size();
   int n_samples = n_iter - n_warmup;
 
   NumericMatrix draws(n_samples, n_params);
-  NumericVector current = clone(init);
+  phaser::Rng rng(seed, chain);
+  NumericVector current = rng.initial_values(n_params);
 
-  std::random_device rd;
-  std::mt19937 gen(rd());
-  std::normal_distribution<> normal(0, 1);
-  std::uniform_real_distribution<> uniform(0, 1);
 
   double step_size = 0.1;
   double log_step_size = std::log(step_size);
@@ -117,7 +115,7 @@ List phaseR_nuts_sampler_multi_re(
 
     NumericVector p(n_params);
     for (int i = 0; i < n_params; i++) {
-      p[i] = normal(gen);
+      p[i] = rng.normal();
     }
 
     double current_H = -phase_log_posterior_multi_re(current, data, n_trans_coef,
@@ -172,7 +170,7 @@ List phaseR_nuts_sampler_multi_re(
     double log_accept = current_H - proposed_H;
     double accept_prob = std::min(1.0, std::exp(log_accept));
 
-    if (uniform(gen) < accept_prob) {
+    if (rng.uniform() < accept_prob) {
       current = q;
     }
 

@@ -4,7 +4,7 @@
 \alias{fit_hmc}
 \title{HMC backend for phase models}
 \usage{
-fit_hmc(stan_data, chains, iter, warmup, cores, ...)
+fit_hmc(stan_data, chains, iter, warmup, cores, seed, ...)
 }
 \arguments{
 \item{stan_data}{Prepared data list}
@@ -16,6 +16,9 @@ fit_hmc(stan_data, chains, iter, warmup, cores, ...)
 \item{warmup}{Warmup iterations}
 
 \item{cores}{Number of cores}
+
+\item{seed}{Integer seed; chain \code{c} samples from the stream seeded by
+\verb{(seed, c)}, which also draws its initial values}
 
 \item{...}{Additional HMC parameters}
 }

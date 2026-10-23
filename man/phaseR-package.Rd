@@ -77,7 +77,12 @@ phaseR produces valid causal estimates.
 }
 
 \author{
-\strong{Maintainer}: Gilles Colling \email{gilles.colling05@gmail.com}
+\strong{Maintainer}: Gilles Colling \email{gilles.colling051@gmail.com} (\href{https://orcid.org/0000-0003-3070-6066}{ORCID})
+
+Authors:
+\itemize{
+  \item Gilles Colling \email{gilles.colling051@gmail.com} (\href{https://orcid.org/0000-0003-3070-6066}{ORCID})
+}
 
 }
 \keyword{internal}

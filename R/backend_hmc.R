@@ -5,28 +5,25 @@
 #' @param iter Iterations per chain
 #' @param warmup Warmup iterations
 #' @param cores Number of cores
+#' @param seed Integer seed; chain `c` samples from the stream seeded by
+#'   `(seed, c)`, which also draws its initial values
 #' @param ... Additional HMC parameters
 #'
 #' @return Raw fit object
 #' @keywords internal
 #'
-fit_hmc <- function(stan_data, chains, iter, warmup, cores, ...) {
+fit_hmc <- function(stan_data, chains, iter, warmup, cores, seed, ...) {
 
   n_params <- stan_data$n_params
-
-  # Initialize chains
-  inits <- lapply(seq_len(chains), function(i) {
-    rnorm(n_params, 0, 0.1)
-  })
 
   # Run chains (parallel if cores > 1)
   if (cores > 1 && chains > 1) {
     draws_list <- parallel::mclapply(seq_len(chains), function(i) {
-      run_nuts_chain(stan_data, inits[[i]], iter, warmup, ...)
+      run_nuts_chain(stan_data, i, iter, warmup, seed, ...)
     }, mc.cores = min(cores, chains))
   } else {
     draws_list <- lapply(seq_len(chains), function(i) {
-      run_nuts_chain(stan_data, inits[[i]], iter, warmup, ...)
+      run_nuts_chain(stan_data, i, iter, warmup, seed, ...)
     })
   }
 
@@ -47,7 +44,7 @@ fit_hmc <- function(stan_data, chains, iter, warmup, cores, ...) {
 
 #' Run a single NUTS chain
 #' @keywords internal
-run_nuts_chain <- function(stan_data, init, iter, warmup, ...) {
+run_nuts_chain <- function(stan_data, chain, iter, warmup, seed, ...) {
 
   # Dispatch based on k_phases, random effects, and GLM
   k_phases <- stan_data$k_phases
@@ -65,7 +62,9 @@ run_nuts_chain <- function(stan_data, init, iter, warmup, ...) {
         unit_start = stan_data$unit_start,
         unit_end = stan_data$unit_end
       ),
-      init = init,
+      n_params = as.integer(stan_data$n_params),
+      seed = as.integer(seed),
+      chain = as.integer(chain),
       n_iter = as.integer(iter),
       n_warmup = as.integer(warmup),
       n_dyn_coef = as.integer(stan_data$n_dyn_coef),
@@ -85,7 +84,9 @@ run_nuts_chain <- function(stan_data, init, iter, warmup, ...) {
         unit_start = stan_data$unit_start,
         unit_end = stan_data$unit_end
       ),
-      init = init,
+      n_params = as.integer(stan_data$n_params),
+      seed = as.integer(seed),
+      chain = as.integer(chain),
       n_iter = as.integer(iter),
       n_warmup = as.integer(warmup),
       n_trans_coef = stan_data$n_trans_coef,
@@ -118,7 +119,9 @@ run_nuts_chain <- function(stan_data, init, iter, warmup, ...) {
           unit_start = stan_data$unit_start,
           unit_end = stan_data$unit_end
         ),
-        init = init,
+        n_params = as.integer(stan_data$n_params),
+      seed = as.integer(seed),
+      chain = as.integer(chain),
         n_iter = as.integer(iter),
         n_warmup = as.integer(warmup),
         n_trans_coef = stan_data$n_trans_coef,
@@ -141,7 +144,9 @@ run_nuts_chain <- function(stan_data, init, iter, warmup, ...) {
           unit_start = stan_data$unit_start,
           unit_end = stan_data$unit_end
         ),
-        init = init,
+        n_params = as.integer(stan_data$n_params),
+      seed = as.integer(seed),
+      chain = as.integer(chain),
         n_iter = as.integer(iter),
         n_warmup = as.integer(warmup),
         n_trans_coef = stan_data$n_trans_coef,
@@ -167,7 +172,9 @@ run_nuts_chain <- function(stan_data, init, iter, warmup, ...) {
           dyn_re_idx_0 = stan_data$dyn_re_idx_0,
           dyn_re_idx_1 = stan_data$dyn_re_idx_1
         ),
-        init = init,
+        n_params = as.integer(stan_data$n_params),
+      seed = as.integer(seed),
+      chain = as.integer(chain),
         n_iter = as.integer(iter),
         n_warmup = as.integer(warmup),
         n_trans_coef = stan_data$n_trans_coef,
@@ -194,7 +201,9 @@ run_nuts_chain <- function(stan_data, init, iter, warmup, ...) {
         unit_start = stan_data$unit_start,
         unit_end = stan_data$unit_end
       ),
-      init = init,
+      n_params = as.integer(stan_data$n_params),
+      seed = as.integer(seed),
+      chain = as.integer(chain),
       n_iter = as.integer(iter),
       n_warmup = as.integer(warmup),
       n_trans_coef = stan_data$n_trans_coef,
@@ -269,11 +278,4 @@ combine_diagnostics <- function(draws_list) {
     mean_accept_prob = mean(vapply(draws_list, function(x) x$diagnostics$accept_prob, numeric(1))),
     step_sizes = vapply(draws_list, function(x) x$diagnostics$step_size, numeric(1))
   )
-}
-
-
-#' Laplace approximation backend (placeholder)
-#' @keywords internal
-fit_laplace <- function(stan_data, ...) {
-  stop("Laplace backend not yet implemented", call. = FALSE)
 }

@@ -4,7 +4,7 @@
 \alias{run_nuts_chain}
 \title{Run a single NUTS chain}
 \usage{
-run_nuts_chain(stan_data, init, iter, warmup, ...)
+run_nuts_chain(stan_data, chain, iter, warmup, seed, ...)
 }
 \description{
 Run a single NUTS chain

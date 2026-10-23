@@ -6,12 +6,13 @@
 #'
 #' @param stan_data Prepared data list
 #' @param n_samples Number of samples to draw from Gaussian approximation
+#' @param seed Integer seed for the draws from the Gaussian approximation
 #' @param ... Additional arguments (ignored)
 #'
 #' @return Raw fit object with same structure as HMC backend
 #' @keywords internal
 #'
-fit_laplace <- function(stan_data, n_samples = 1000, ...) {
+fit_laplace <- function(stan_data, n_samples = 1000, seed, ...) {
 
   n_params <- stan_data$n_params
 
@@ -58,6 +59,7 @@ fit_laplace <- function(stan_data, n_samples = 1000, ...) {
   }
 
   # Sample from Gaussian approximation
+  set.seed(seed)
   draws <- sample_mvnorm(n_samples, mode, cov_matrix)
   colnames(draws) <- stan_data$param_names
 

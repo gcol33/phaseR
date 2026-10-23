@@ -8,7 +8,10 @@
 #' @param backend Estimation backend: "hmc" (default) or "laplace"
 #' @param cores Number of cores for parallel chains (default 1)
 #' @param prior Prior specification from `prior()` (default: weakly informative)
-#' @param seed Random seed for reproducibility
+#' @param seed Integer seed. Two fits with the same `seed`, data and settings
+#'   return identical draws. With `seed = NULL` the seed is drawn from R's
+#'   random number generator, so `set.seed()` before the call makes the fit
+#'   reproducible; the seed used is stored in the returned object as `seed`.
 #' @param ... Additional arguments passed to backend
 #'
 #' @return A `phase_fit` object
@@ -50,18 +53,36 @@ fit_phaseR <- function(model,
   # Prepare data for C++
   stan_data <- prepare_stan_data(model, data, prior)
 
-  # Set seed
-  if (!is.null(seed)) set.seed(seed)
+  seed <- resolve_seed(seed)
 
   # Dispatch to backend
   fit_raw <- switch(backend,
-    hmc = fit_hmc(stan_data, chains, iter, warmup, cores, ...),
-    laplace = fit_laplace(stan_data, ...),
+    hmc = fit_hmc(stan_data, chains, iter, warmup, cores, seed, ...),
+    laplace = fit_laplace(stan_data, seed = seed, ...),
     stop("Unknown backend")
   )
 
-  # Convert to phase_fit
-  convert_to_phase_fit(fit_raw, model, data, backend, chains, iter, warmup, stan_data)
+  fit <- convert_to_phase_fit(fit_raw, model, data, backend, chains, iter, warmup, stan_data)
+  fit$seed <- seed
+  fit
+}
+
+
+#' Resolve the seed of a fit
+#'
+#' @param seed `NULL` or a single integer-valued number.
+#' @return An integer seed. `NULL` is replaced by a draw from R's random
+#'   number generator.
+#' @keywords internal
+resolve_seed <- function(seed) {
+  if (is.null(seed)) {
+    return(sample.int(.Machine$integer.max, 1L))
+  }
+  if (!is.numeric(seed) || length(seed) != 1L || !is.finite(seed) ||
+      seed != round(seed) || abs(seed) > .Machine$integer.max) {
+    stop("`seed` must be NULL or a single integer.", call. = FALSE)
+  }
+  as.integer(seed)
 }
 
 

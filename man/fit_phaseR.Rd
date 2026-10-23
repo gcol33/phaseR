@@ -34,7 +34,10 @@ fit_phaseR(
 
 \item{prior}{Prior specification from \code{prior()} (default: weakly informative)}
 
-\item{seed}{Random seed for reproducibility}
+\item{seed}{Integer seed. Two fits with the same \code{seed}, data and settings
+return identical draws. With \code{seed = NULL} the seed is drawn from R's
+random number generator, so \code{set.seed()} before the call makes the fit
+reproducible; the seed used is stored in the returned object as \code{seed}.}
 
 \item{...}{Additional arguments passed to backend}
 }

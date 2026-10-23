@@ -1,6 +1,6 @@
 #include <Rcpp.h>
 #include <cmath>
-#include <random>
+#include "rng.h"
 
 using namespace Rcpp;
 
@@ -70,7 +70,9 @@ void leapfrog_step_k(
 // [[Rcpp::export]]
 List phaseR_nuts_sampler_k(
     List data,
-    NumericVector init,
+    int n_params,
+    int seed,
+    int chain,
     int n_iter,
     int n_warmup,
     IntegerVector n_dyn_coef,
@@ -79,20 +81,16 @@ List phaseR_nuts_sampler_k(
     double target_accept = 0.8,
     int max_treedepth = 10
 ) {
-  int n_params = init.size();
   int n_samples = n_iter - n_warmup;
 
   NumericMatrix draws(n_samples, n_params);
   NumericVector accept_probs(n_iter);
   int n_divergent = 0;
 
-  NumericVector q = clone(init);
+  phaser::Rng rng(seed, chain);
+  NumericVector q = rng.initial_values(n_params);
   double step_size = 0.05;  // Smaller for k-phase
 
-  std::random_device rd;
-  std::mt19937 gen(rd());
-  std::normal_distribution<> normal(0, 1);
-  std::uniform_real_distribution<> uniform(0, 1);
 
   // Dual averaging
   double mu = std::log(10.0 * step_size);
@@ -110,7 +108,7 @@ List phaseR_nuts_sampler_k(
     // Sample momentum
     NumericVector p(n_params);
     for (int i = 0; i < n_params; i++) {
-      p[i] = normal(gen);
+      p[i] = rng.normal();
     }
 
     NumericVector q_proposal = clone(q);
@@ -146,7 +144,7 @@ List phaseR_nuts_sampler_k(
       accept_prob = 0.0;
     }
 
-    if (uniform(gen) < accept_prob) {
+    if (rng.uniform() < accept_prob) {
       q = q_proposal;
     }
 

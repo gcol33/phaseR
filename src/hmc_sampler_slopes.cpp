@@ -1,6 +1,6 @@
 #include <Rcpp.h>
 #include <cmath>
-#include <random>
+#include "rng.h"
 
 using namespace Rcpp;
 
@@ -108,7 +108,9 @@ double hamiltonian_slopes(
 // [[Rcpp::export]]
 List phaseR_nuts_sampler_slopes(
     List data,
-    NumericVector init,
+    int n_params,
+    int seed,
+    int chain,
     int n_iter,
     int n_warmup,
     int n_trans_coef,
@@ -118,13 +120,13 @@ List phaseR_nuts_sampler_slopes(
     List dyn_re_info_0,
     List dyn_re_info_1
 ) {
-  int n_params = init.size();
   int n_samples = n_iter - n_warmup;
 
   NumericMatrix draws(n_samples, n_params);
 
   // Current state
-  NumericVector q = clone(init);
+  phaser::Rng rng(seed, chain);
+  NumericVector q = rng.initial_values(n_params);
 
   // Adaptation parameters
   double step_size = 0.1;
@@ -133,13 +135,6 @@ List phaseR_nuts_sampler_slopes(
 
   // Leapfrog settings
   int n_leapfrog = 10;
-
-  // Random number generator
-  std::random_device rd;
-  std::mt19937 gen(rd());
-  std::normal_distribution<> normal(0.0, 1.0);
-  std::uniform_real_distribution<> uniform(0.0, 1.0);
-
   int n_accept = 0;
   int n_divergent = 0;
 
@@ -148,7 +143,7 @@ List phaseR_nuts_sampler_slopes(
     // Sample momentum
     NumericVector p(n_params);
     for (int i = 0; i < n_params; i++) {
-      p[i] = normal(gen);
+      p[i] = rng.normal();
     }
 
     // Store initial state
@@ -186,7 +181,7 @@ List phaseR_nuts_sampler_slopes(
       double log_accept_prob = -delta_H;
       double accept_prob = std::min(1.0, std::exp(log_accept_prob));
 
-      if (uniform(gen) < accept_prob) {
+      if (rng.uniform() < accept_prob) {
         n_accept++;
         // q is already updated
       } else {

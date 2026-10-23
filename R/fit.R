@@ -384,9 +384,10 @@ build_re_param_names <- function(component, re_name, re_info) {
       names <- c(names, paste0("log_sigma_", component, "_re_", re_name))
     }
   } else if (re_info$correlated) {
-    # Cholesky lower triangle: L11, L21, L22, L31, L32, L33, ...
-    for (i in seq_len(n_coefs)) {
-      for (j in seq_len(i)) {
+    # Cholesky lower triangle packed by column, as the likelihood reads it:
+    # L11, L21, ..., Ln1, L22, ..., Ln2, ..., Lnn
+    for (j in seq_len(n_coefs)) {
+      for (i in j:n_coefs) {
         if (component == "trans") {
           names <- c(names, paste0("L_trans_re_", re_name, "_", i, "_", j))
         } else {

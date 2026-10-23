@@ -62,3 +62,19 @@ test_that("a random slope without intercept multiplies its covariate", {
   expect_equal(change[["re"]], change[["fixed"]], tolerance = 1e-10)
   expect_gt(abs(change[["re"]]), 1)
 })
+
+test_that("Cholesky factor names follow the order the likelihood reads", {
+  dat <- reference_data()
+  model <- reference_two_phase(~ x, y ~ x + z + (1 + x + z | region), y ~ x)
+  stan_data <- phaseR:::prepare_stan_data(model, dat, prior(re ~ half_normal(0.8)))
+  L_names <- grep("^L_", stan_data$param_names, value = TRUE)
+  index <- substring(L_names, nchar(L_names) - 2)
+  expect_equal(index, c("1_1", "2_1", "3_1", "2_2", "3_2", "3_3"))
+  # initial_values() sets the diagonal of the factor, located by the C++
+  # packing, to the scale of the random-effect prior.
+  start <- phaseR:::initial_values(phaseR:::posterior_target(stan_data), 1)[[1]]
+  names(start) <- stan_data$param_names
+  diagonal <- substring(index, 1, 1) == substring(index, 3, 3)
+  expect_equal(unname(start[L_names[diagonal]]), rep(0.8, 3))
+  expect_equal(unname(start[L_names[!diagonal]]), rep(0, 3))
+})

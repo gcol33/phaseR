@@ -1,5 +1,10 @@
 # phaseR (development version)
 
+* The Cholesky factor of correlated random effects with three or more
+  coefficients is named in the order the likelihood and `VarCorr()` read it
+  (by column: `L_..._1_1`, `L_..._2_1`, `L_..._3_1`, `L_..._2_2`, ...). The
+  names followed the rows, so `L_..._2_2` labelled the draws of `L_31`.
+
 * `waic()` and `loo()` compute the pointwise log likelihood with the forward
   recursion the backends fit with. The R copy of the recursion they used
   knew only two Gaussian phases without random effects, so for models with

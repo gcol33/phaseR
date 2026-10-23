@@ -425,7 +425,8 @@ private:
 }  // namespace
 
 
-Rcpp::List run_nuts(const LogDensity& target, Rng& rng,
+Rcpp::List run_nuts(const LogDensity& target, const std::vector<double>& init,
+                    Rng& rng,
                     const NutsSettings& settings) {
   const int n = target.dim();
   const int n_iter = settings.n_iter;
@@ -438,8 +439,7 @@ Rcpp::List run_nuts(const LogDensity& target, Rng& rng,
   z.grad.assign(n, 0.0);
   bool initialized = false;
   for (int attempt = 0; attempt < 100 && !initialized; attempt++) {
-    Rcpp::NumericVector init = rng.initial_values(n);
-    z.q.assign(init.begin(), init.end());
+    z.q = rng.initial_values(init);
     z.lp = target.log_density_gradient(z.q.data(), z.grad.data());
     initialized = std::isfinite(z.lp);
     for (int i = 0; i < n && initialized; i++) {

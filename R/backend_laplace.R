@@ -4,40 +4,50 @@
 #' Finds the posterior mode and approximates the posterior as
 #' Gaussian with covariance equal to the inverse Hessian.
 #'
+#' The log posterior of a phase model is multimodal: a mode in which a phase
+#' is never entered leaves that phase's parameters at their prior. The mode
+#' is therefore searched from `n_starts` starting points built from
+#' provisional phase assignments ([initial_values()]), and the start reaching
+#' the highest log posterior is kept.
+#'
 #' @param stan_data Prepared data list
 #' @param n_samples Number of samples to draw from Gaussian approximation
-#' @param seed Integer seed for the draws from the Gaussian approximation
+#' @param seed Integer seed for the random starting points and the draws
+#'   from the Gaussian approximation
+#' @param n_starts Number of starting points of the mode search
 #' @param ... Additional arguments (ignored)
 #'
 #' @return Raw fit object with same structure as HMC backend
 #' @keywords internal
 #'
-fit_laplace <- function(stan_data, n_samples = 1000, seed, ...) {
+fit_laplace <- function(stan_data, n_samples = 1000, seed, n_starts = 5L,
+                        ...) {
 
   n_params <- stan_data$n_params
-
-  # Objective (negative log posterior) and its exact gradient
+  target <- posterior_target(stan_data)
   objective <- build_neg_log_posterior(stan_data)
 
-  # Initial values
-  init <- rep(0, n_params)
-
-  # Find the mode using L-BFGS-B
-  opt_result <- stats::optim(
-    par = init,
-    fn = objective$fn,
-    gr = objective$gr,
-    method = "L-BFGS-B",
-    control = list(maxit = 1000, factr = 1e7),
-    hessian = TRUE
-  )
+  starts <- with_seed(seed, initial_values(target, n_starts))
+  runs <- lapply(starts, function(init) {
+    stats::optim(
+      par = init,
+      fn = objective$fn,
+      gr = objective$gr,
+      method = "L-BFGS-B",
+      control = list(maxit = 1000, factr = 1e7)
+    )
+  })
+  values <- vapply(runs, function(r) r$value, numeric(1))
+  opt_result <- runs[[which.min(values)]]
 
   if (opt_result$convergence != 0) {
     warning("Optimization did not converge: ", opt_result$message)
   }
+  opt_result$hessian <- stats::optimHess(opt_result$par, objective$fn,
+                                         objective$gr)
 
   # Extract mode and Hessian
-  mode <- opt_result$par
+  mode <- stats::setNames(opt_result$par, stan_data$param_names)
   hessian <- opt_result$hessian
 
   # Compute covariance matrix (inverse Hessian)
@@ -60,12 +70,11 @@ fit_laplace <- function(stan_data, n_samples = 1000, seed, ...) {
   }
 
   # Sample from Gaussian approximation
-  set.seed(seed)
-  draws <- sample_mvnorm(n_samples, mode, cov_matrix)
+  draws <- with_seed(seed, sample_mvnorm(n_samples, mode, cov_matrix))
   colnames(draws) <- stan_data$param_names
 
   # Compute standard errors
-  se <- sqrt(diag(cov_matrix))
+  se <- stats::setNames(sqrt(diag(cov_matrix)), stan_data$param_names)
 
   list(
     draws = draws,
@@ -74,6 +83,7 @@ fit_laplace <- function(stan_data, n_samples = 1000, seed, ...) {
       convergence = opt_result$convergence,
       value = opt_result$value,
       counts = opt_result$counts,
+      start_values = -values,
       mode = mode,
       se = se,
       hessian = hessian,

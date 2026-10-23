@@ -18,7 +18,10 @@
 #' @param ... Backend settings. For `backend = "hmc"`: `adapt_delta`, the target
 #'   acceptance statistic of step-size adaptation (default 0.8; raise it
 #'   towards 1 when there are divergent transitions), and `max_treedepth`
-#'   (default 10). For `backend = "laplace"`: `n_samples` (default 1000).
+#'   (default 10). For `backend = "laplace"`: `n_samples` (default 1000)
+#'   and `n_starts` (default 5), the number of data-informed starting points
+#'   from which the posterior mode is searched; the highest mode found is
+#'   kept.
 #'
 #' @return A `phase_fit` object
 #' @export

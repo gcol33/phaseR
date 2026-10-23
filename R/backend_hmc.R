@@ -9,7 +9,9 @@
 #' @param warmup Warmup iterations
 #' @param cores Number of cores
 #' @param seed Integer seed; chain `c` samples from the stream seeded by
-#'   `(seed, c)`, which also draws its initial values
+#'   `(seed, c)`, which also perturbs its initial values. The initial values
+#'   are the data-informed starting points of [initial_values()], drawn with
+#'   `seed`.
 #' @param adapt_delta Target average acceptance statistic of the step-size
 #'   adaptation, in (0, 1)
 #' @param max_treedepth Maximum tree depth; a transition takes at most
@@ -23,9 +25,11 @@ fit_hmc <- function(stan_data, chains, iter, warmup, cores, seed,
                     adapt_delta = 0.8, max_treedepth = 10L, ...) {
 
   target <- posterior_target(stan_data)
+  inits <- with_seed(seed, initial_values(target, chains))
   run_chain <- function(chain) {
     phaseR_nuts_sampler(
       target = target,
+      init = inits[[chain]],
       n_iter = as.integer(iter),
       n_warmup = as.integer(warmup),
       seed = as.integer(seed),

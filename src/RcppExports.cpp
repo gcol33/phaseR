@@ -46,19 +46,20 @@ BEGIN_RCPP
 END_RCPP
 }
 // phaseR_nuts_sampler
-List phaseR_nuts_sampler(List target, int n_iter, int n_warmup, int seed, int chain, double adapt_delta, int max_treedepth);
-RcppExport SEXP _phaseR_phaseR_nuts_sampler(SEXP targetSEXP, SEXP n_iterSEXP, SEXP n_warmupSEXP, SEXP seedSEXP, SEXP chainSEXP, SEXP adapt_deltaSEXP, SEXP max_treedepthSEXP) {
+List phaseR_nuts_sampler(List target, NumericVector init, int n_iter, int n_warmup, int seed, int chain, double adapt_delta, int max_treedepth);
+RcppExport SEXP _phaseR_phaseR_nuts_sampler(SEXP targetSEXP, SEXP initSEXP, SEXP n_iterSEXP, SEXP n_warmupSEXP, SEXP seedSEXP, SEXP chainSEXP, SEXP adapt_deltaSEXP, SEXP max_treedepthSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< List >::type target(targetSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type init(initSEXP);
     Rcpp::traits::input_parameter< int >::type n_iter(n_iterSEXP);
     Rcpp::traits::input_parameter< int >::type n_warmup(n_warmupSEXP);
     Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
     Rcpp::traits::input_parameter< int >::type chain(chainSEXP);
     Rcpp::traits::input_parameter< double >::type adapt_delta(adapt_deltaSEXP);
     Rcpp::traits::input_parameter< int >::type max_treedepth(max_treedepthSEXP);
-    rcpp_result_gen = Rcpp::wrap(phaseR_nuts_sampler(target, n_iter, n_warmup, seed, chain, adapt_delta, max_treedepth));
+    rcpp_result_gen = Rcpp::wrap(phaseR_nuts_sampler(target, init, n_iter, n_warmup, seed, chain, adapt_delta, max_treedepth));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -67,7 +68,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_phaseR_phaseR_density", (DL_FUNC) &_phaseR_phaseR_density, 1},
     {"_phaseR_phaseR_log_density", (DL_FUNC) &_phaseR_phaseR_log_density, 2},
     {"_phaseR_phaseR_log_density_gradient", (DL_FUNC) &_phaseR_phaseR_log_density_gradient, 2},
-    {"_phaseR_phaseR_nuts_sampler", (DL_FUNC) &_phaseR_phaseR_nuts_sampler, 7},
+    {"_phaseR_phaseR_nuts_sampler", (DL_FUNC) &_phaseR_phaseR_nuts_sampler, 8},
     {NULL, NULL, 0}
 };
 

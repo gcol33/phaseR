@@ -103,8 +103,9 @@ List phaseR_log_density_gradient(SEXP density, NumericVector params) {
 
 
 // [[Rcpp::export]]
-List phaseR_nuts_sampler(List target, int n_iter, int n_warmup, int seed,
-                         int chain, double adapt_delta, int max_treedepth) {
+List phaseR_nuts_sampler(List target, NumericVector init, int n_iter,
+                         int n_warmup, int seed, int chain,
+                         double adapt_delta, int max_treedepth) {
   if (n_warmup < 0 || n_warmup >= n_iter) {
     stop("`warmup` must be non-negative and smaller than `iter`.");
   }
@@ -116,8 +117,10 @@ List phaseR_nuts_sampler(List target, int n_iter, int n_warmup, int seed,
   }
 
   std::unique_ptr<phaser::LogDensity> density = make_density(target);
+  check_length(*density, init);
   phaser::Rng rng(seed, chain);
   phaser::NutsSettings settings = {n_iter, n_warmup, max_treedepth,
                                    adapt_delta};
-  return phaser::run_nuts(*density, rng, settings);
+  return phaser::run_nuts(*density, as<std::vector<double> >(init), rng,
+                          settings);
 }

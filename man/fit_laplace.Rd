@@ -4,14 +4,17 @@
 \alias{fit_laplace}
 \title{Laplace approximation backend for phase models}
 \usage{
-fit_laplace(stan_data, n_samples = 1000, seed, ...)
+fit_laplace(stan_data, n_samples = 1000, seed, n_starts = 5L, ...)
 }
 \arguments{
 \item{stan_data}{Prepared data list}
 
 \item{n_samples}{Number of samples to draw from Gaussian approximation}
 
-\item{seed}{Integer seed for the draws from the Gaussian approximation}
+\item{seed}{Integer seed for the random starting points and the draws
+from the Gaussian approximation}
+
+\item{n_starts}{Number of starting points of the mode search}
 
 \item{...}{Additional arguments (ignored)}
 }
@@ -22,5 +25,12 @@ Raw fit object with same structure as HMC backend
 Fast approximate inference using the Laplace approximation.
 Finds the posterior mode and approximates the posterior as
 Gaussian with covariance equal to the inverse Hessian.
+}
+\details{
+The log posterior of a phase model is multimodal: a mode in which a phase
+is never entered leaves that phase's parameters at their prior. The mode
+is therefore searched from \code{n_starts} starting points built from
+provisional phase assignments (\code{\link[=initial_values]{initial_values()}}), and the start reaching
+the highest log posterior is kept.
 }
 \keyword{internal}

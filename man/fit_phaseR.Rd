@@ -45,7 +45,10 @@ reproducible; the seed used is stored in the returned object as \code{seed}.}
 \item{...}{Backend settings. For \code{backend = "hmc"}: \code{adapt_delta}, the target
 acceptance statistic of step-size adaptation (default 0.8; raise it
 towards 1 when there are divergent transitions), and \code{max_treedepth}
-(default 10). For \code{backend = "laplace"}: \code{n_samples} (default 1000).}
+(default 10). For \code{backend = "laplace"}: \code{n_samples} (default 1000)
+and \code{n_starts} (default 5), the number of data-informed starting points
+from which the posterior mode is searched; the highest mode found is
+kept.}
 }
 \value{
 A \code{phase_fit} object

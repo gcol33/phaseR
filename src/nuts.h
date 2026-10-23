@@ -26,7 +26,8 @@ struct NutsSettings {
 // windows (75 / 25-doubling / 50 iterations).
 //
 // Returns the post-warmup draws and per-iteration diagnostics.
-Rcpp::List run_nuts(const LogDensity& target, Rng& rng, const NutsSettings& settings);
+Rcpp::List run_nuts(const LogDensity& target, const std::vector<double>& init,
+                    Rng& rng, const NutsSettings& settings);
 
 }  // namespace phaser
 

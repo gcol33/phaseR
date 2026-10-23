@@ -1,5 +1,21 @@
 # phaseR (development version)
 
+* The Laplace backend searches the posterior mode from data-informed
+  starting points instead of all-zero parameters, and NUTS chains start
+  from them. A phase model's posterior has a mode in which no unit enters a
+  phase and that phase's parameters sit at their prior; from zeros, far
+  from the data, the optimiser stopped there (60 units x 4 times from
+  `sim_phaseR(seed = 8)`: active intercept -0.003 with SD 2.5 under
+  Laplace, 8.15 with SD 0.23 under NUTS), and so could a NUTS chain. Each
+  starting point fits every phase's regression (Gaussian, Poisson or
+  logistic, ridge-stabilised) and every transition's logistic regression to
+  a provisional phase assignment: one splits each unit into equal runs, the
+  others draw each unit's moves at random from `seed`. Laplace optimises
+  from `n_starts` of them (default 5) and keeps the highest log posterior,
+  reported in `diagnostics$start_values`; NUTS chain `c` starts at the
+  `c`-th. Both are reproducible from `seed`, and R's random number stream
+  outside the fit is left untouched.
+
 * Both backends use the exact gradient of the log posterior instead of
   finite differences. The backward recursion over the latent phases gives
   the derivative of each unit's log likelihood with respect to its emission

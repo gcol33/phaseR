@@ -13,7 +13,7 @@ phaseR_log_density_gradient <- function(density, params) {
     .Call(`_phaseR_phaseR_log_density_gradient`, density, params)
 }
 
-phaseR_nuts_sampler <- function(target, n_iter, n_warmup, seed, chain, adapt_delta, max_treedepth) {
-    .Call(`_phaseR_phaseR_nuts_sampler`, target, n_iter, n_warmup, seed, chain, adapt_delta, max_treedepth)
+phaseR_nuts_sampler <- function(target, init, n_iter, n_warmup, seed, chain, adapt_delta, max_treedepth) {
+    .Call(`_phaseR_phaseR_nuts_sampler`, target, init, n_iter, n_warmup, seed, chain, adapt_delta, max_treedepth)
 }
 

@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstdint>
 #include <random>
+#include <vector>
 
 namespace phaser {
 
@@ -48,11 +49,12 @@ public:
     return u * scale;
   }
 
-  // Initial values: independent Normal(0, 0.1^2) per coordinate.
-  Rcpp::NumericVector initial_values(int n_params) {
-    Rcpp::NumericVector q(n_params);
-    for (int i = 0; i < n_params; i++) {
-      q[i] = 0.1 * normal();
+  // Initial values: `centre` plus independent Normal(0, 0.1^2) noise per
+  // coordinate.
+  std::vector<double> initial_values(const std::vector<double>& centre) {
+    std::vector<double> q(centre.size());
+    for (std::size_t i = 0; i < q.size(); i++) {
+      q[i] = centre[i] + 0.1 * normal();
     }
     return q;
   }

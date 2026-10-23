@@ -7,7 +7,8 @@ run_mvnormal <- function(mu, Sigma, chains = 4, iter = 2000, warmup = 1000,
     args = list()
   )
   runs <- lapply(seq_len(chains), function(chain) {
-    phaseR:::phaseR_nuts_sampler(target, as.integer(iter), as.integer(warmup),
+    phaseR:::phaseR_nuts_sampler(target, numeric(length(mu)), as.integer(iter),
+                                 as.integer(warmup),
                                  as.integer(seed), as.integer(chain),
                                  adapt_delta, as.integer(max_treedepth))
   })
@@ -104,11 +105,11 @@ test_that("NUTS streams are reproducible per seed and chain", {
 test_that("NUTS rejects invalid settings", {
   target <- list(kind = "mvnormal", n_params = 1L,
                  data = list(mu = 0, precision = matrix(1)), args = list())
-  expect_error(phaseR:::phaseR_nuts_sampler(target, 10L, 10L, 1L, 1L, 0.8, 10L),
+  expect_error(phaseR:::phaseR_nuts_sampler(target, 0, 10L, 10L, 1L, 1L, 0.8, 10L),
                "warmup")
-  expect_error(phaseR:::phaseR_nuts_sampler(target, 10L, 5L, 1L, 1L, 1, 10L),
+  expect_error(phaseR:::phaseR_nuts_sampler(target, 0, 10L, 5L, 1L, 1L, 1, 10L),
                "adapt_delta")
-  expect_error(phaseR:::phaseR_nuts_sampler(target, 10L, 5L, 1L, 1L, 0.8, 0L),
+  expect_error(phaseR:::phaseR_nuts_sampler(target, 0, 10L, 5L, 1L, 1L, 0.8, 0L),
                "max_treedepth")
 })
 

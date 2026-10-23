@@ -28,7 +28,9 @@ fit_hmc(
 \item{cores}{Number of cores}
 
 \item{seed}{Integer seed; chain \code{c} samples from the stream seeded by
-\verb{(seed, c)}, which also draws its initial values}
+\verb{(seed, c)}, which also perturbs its initial values. The initial values
+are the data-informed starting points of \code{\link[=initial_values]{initial_values()}}, drawn with
+\code{seed}.}
 
 \item{adapt_delta}{Target average acceptance statistic of the step-size
 adaptation, in (0, 1)}

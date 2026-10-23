@@ -113,29 +113,30 @@ summary(fit)
 #> 
 #> Transition coefficients:
 #>                         mean   sd  2.5% median 97.5% Rhat    ESS
-#> beta_trans_(Intercept) -0.92 0.24 -1.39  -0.92 -0.47   NA 996.64
-#> beta_trans_x            0.42 0.25 -0.08   0.42  0.90   NA 862.56
+#> beta_trans_(Intercept) -0.92 0.23 -1.39  -0.92 -0.49   NA 878.85
+#> beta_trans_x            0.42 0.25 -0.05   0.42  0.93   NA 818.19
 #> 
 #> Dynamics coefficients (inactive):
-#>                           mean   sd  2.5% median 97.5% Rhat    ESS
-#> beta_inactive_(Intercept) 9.88 0.08  9.72   9.88 10.03   NA 979.03
-#> beta_inactive_x           0.06 0.07 -0.07   0.06  0.19   NA 993.48
+#>                           mean   sd  2.5% median 97.5% Rhat     ESS
+#> beta_inactive_(Intercept) 9.88 0.08  9.72   9.88 10.03   NA  986.47
+#> beta_inactive_x           0.06 0.07 -0.06   0.06  0.19   NA 1053.52
 #> 
 #> Dynamics coefficients (active):
 #>                          mean   sd  2.5% median 97.5% Rhat    ESS
-#> beta_active_(Intercept)  7.95 0.15  7.65   7.96  8.24   NA 888.67
-#> beta_active_x           -0.47 0.13 -0.72  -0.47 -0.22   NA 900.03
+#> beta_active_(Intercept)  7.95 0.15  7.65   7.96  8.24   NA 966.92
+#> beta_active_x           -0.47 0.13 -0.71  -0.47 -0.22   NA 986.75
 #> 
 #> Variance parameters:
 #>                    mean   sd  2.5% median 97.5% Rhat     ESS
-#> log_sigma_inactive 0.04 0.05 -0.05   0.04  0.14   NA  944.09
-#> log_sigma_active   0.41 0.06  0.30   0.40  0.52   NA 1082.53
+#> log_sigma_inactive 0.04 0.05 -0.05   0.04  0.14   NA  865.83
+#> log_sigma_active   0.41 0.06  0.30   0.40  0.52   NA 1025.50
 ```
 
 `backend = "laplace"` approximates the posterior by a Gaussian at its
-mode and returns within a second. The default backend, `"hmc"`, samples
-the posterior with the No-U-Turn sampler, and `chains` and `iter` set
-the number of chains and the iterations per chain:
+mode, with any random effects integrated out first, and returns within a
+second. The default backend, `"hmc"`, samples the posterior with the
+No-U-Turn sampler, and `chains` and `iter` set the number of chains and
+the iterations per chain:
 
 ``` r
 fit <- fit_phaseR(model, data = dat, chains = 2, iter = 1000, seed = 42)
@@ -167,10 +168,10 @@ of setting `x` to 1 against 0, with a 95% credible interval:
 ``` r
 effect <- ate(fit, treatment_var = "x")
 effect$ate
-#> [1] -0.3821998
+#> [1] -0.3790779
 effect$ate_ci
-#>        2.5%       97.5% 
-#> -0.71036013 -0.06097235
+#>       2.5%      97.5% 
+#> -0.7154333 -0.0678609
 ```
 
 `counterfactual()` predicts outcomes for new covariate values, and

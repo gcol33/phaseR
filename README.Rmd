@@ -79,7 +79,7 @@ fit <- fit_phaseR(model, data = dat, backend = "laplace", seed = 42)
 summary(fit)
 ```
 
-`backend = "laplace"` approximates the posterior by a Gaussian at its mode and returns within a second. The default backend, `"hmc"`, samples the posterior with the No-U-Turn sampler, and `chains` and `iter` set the number of chains and the iterations per chain:
+`backend = "laplace"` approximates the posterior by a Gaussian at its mode, with any random effects integrated out first, and returns within a second. The default backend, `"hmc"`, samples the posterior with the No-U-Turn sampler, and `chains` and `iter` set the number of chains and the iterations per chain:
 
 ```r
 fit <- fit_phaseR(model, data = dat, chains = 2, iter = 1000, seed = 42)

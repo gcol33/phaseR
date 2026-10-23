@@ -144,4 +144,35 @@ PhaseModel::PhaseModel(const Rcpp::List& target)
   }
 }
 
+
+std::vector<int> PhaseModel::random_effect_indices() const {
+  std::vector<int> out;
+  for (const LinearPredictor& pred : lp_) {
+    for (const RandomEffectTerm& term : pred.re) {
+      for (int e = 0; e < term.n_effects(); e++) out.push_back(term.offset + e);
+    }
+  }
+  std::sort(out.begin(), out.end());
+  return out;
+}
+
+
+std::vector<std::vector<int> > PhaseModel::unit_random_effects() const {
+  std::vector<std::vector<int> > out(unit_start_.size());
+  for (std::size_t i = 0; i < unit_start_.size(); i++) {
+    std::vector<int>& effects = out[i];
+    for (const LinearPredictor& pred : lp_) {
+      for (const RandomEffectTerm& term : pred.re) {
+        for (int t = unit_start_[i]; t <= unit_end_[i]; t++) {
+          const int first = term.offset + term.group[t] * term.n_coefs;
+          for (int j = 0; j < term.n_coefs; j++) effects.push_back(first + j);
+        }
+      }
+    }
+    std::sort(effects.begin(), effects.end());
+    effects.erase(std::unique(effects.begin(), effects.end()), effects.end());
+  }
+  return out;
+}
+
 }  // namespace phaser

@@ -92,3 +92,37 @@ reference_target <- function(case, dat = reference_data()) {
   stan_data <- phaseR:::prepare_stan_data(case$model, dat, case$prior)
   phaseR:::posterior_target(stan_data)
 }
+
+# Central differences with one Richardson extrapolation step: the error is
+# O(h^4) in the step and O(eps |f| / h) in rounding.
+richardson_gradient <- function(f, x, h = 1e-4) {
+  vapply(seq_along(x), function(i) {
+    step <- h * max(1, abs(x[i]))
+    central <- function(s) {
+      e <- replace(numeric(length(x)), i, s)
+      (f(x + e) - f(x - e)) / (2 * s)
+    }
+    (4 * central(step / 2) - central(step)) / 3
+  }, numeric(1))
+}
+
+gradient_cases <- function() {
+  dat <- reference_data()
+  dat$year <- factor(dat$time)
+  cases <- reference_cases()
+  cases$crossed_year <- list(
+    model = reference_two_phase(~ x + (1 | year), y ~ x + (1 | site),
+                                y ~ x + (1 | year)),
+    prior = prior(re ~ half_cauchy(1)))
+  cases$slope_only <- list(
+    model = reference_two_phase(~ x, y ~ 1 + (0 + x | site), y ~ x),
+    prior = prior())
+  cases$correlated_three <- list(
+    model = reference_two_phase(~ x, y ~ x + z + (1 + x + z | region), y ~ x),
+    prior = prior(cor ~ lkj(3), re ~ half_normal(1)))
+  cases$binomial_re <- list(
+    model = reference_two_phase(~ x, bin ~ x + (1 | site), bin ~ 1,
+                                family_0 = binomial()),
+    prior = prior())
+  list(dat = dat, cases = cases)
+}

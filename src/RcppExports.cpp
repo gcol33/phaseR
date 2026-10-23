@@ -10,6 +10,64 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// phaseR_laplace
+SEXP phaseR_laplace(List target);
+RcppExport SEXP _phaseR_phaseR_laplace(SEXP targetSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< List >::type target(targetSEXP);
+    rcpp_result_gen = Rcpp::wrap(phaseR_laplace(target));
+    return rcpp_result_gen;
+END_RCPP
+}
+// phaseR_laplace_layout
+List phaseR_laplace_layout(SEXP laplace);
+RcppExport SEXP _phaseR_phaseR_laplace_layout(SEXP laplaceSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type laplace(laplaceSEXP);
+    rcpp_result_gen = Rcpp::wrap(phaseR_laplace_layout(laplace));
+    return rcpp_result_gen;
+END_RCPP
+}
+// phaseR_laplace_objective
+List phaseR_laplace_objective(SEXP laplace, NumericVector theta);
+RcppExport SEXP _phaseR_phaseR_laplace_objective(SEXP laplaceSEXP, SEXP thetaSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type laplace(laplaceSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type theta(thetaSEXP);
+    rcpp_result_gen = Rcpp::wrap(phaseR_laplace_objective(laplace, theta));
+    return rcpp_result_gen;
+END_RCPP
+}
+// phaseR_laplace_hessian
+NumericMatrix phaseR_laplace_hessian(SEXP laplace, NumericVector theta);
+RcppExport SEXP _phaseR_phaseR_laplace_hessian(SEXP laplaceSEXP, SEXP thetaSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type laplace(laplaceSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type theta(thetaSEXP);
+    rcpp_result_gen = Rcpp::wrap(phaseR_laplace_hessian(laplace, theta));
+    return rcpp_result_gen;
+END_RCPP
+}
+// phaseR_laplace_conditional
+List phaseR_laplace_conditional(SEXP laplace, NumericVector theta);
+RcppExport SEXP _phaseR_phaseR_laplace_conditional(SEXP laplaceSEXP, SEXP thetaSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type laplace(laplaceSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type theta(thetaSEXP);
+    rcpp_result_gen = Rcpp::wrap(phaseR_laplace_conditional(laplace, theta));
+    return rcpp_result_gen;
+END_RCPP
+}
 // phaseR_density
 SEXP phaseR_density(List target);
 RcppExport SEXP _phaseR_phaseR_density(SEXP targetSEXP) {
@@ -65,6 +123,11 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_phaseR_phaseR_laplace", (DL_FUNC) &_phaseR_phaseR_laplace, 1},
+    {"_phaseR_phaseR_laplace_layout", (DL_FUNC) &_phaseR_phaseR_laplace_layout, 1},
+    {"_phaseR_phaseR_laplace_objective", (DL_FUNC) &_phaseR_phaseR_laplace_objective, 2},
+    {"_phaseR_phaseR_laplace_hessian", (DL_FUNC) &_phaseR_phaseR_laplace_hessian, 2},
+    {"_phaseR_phaseR_laplace_conditional", (DL_FUNC) &_phaseR_phaseR_laplace_conditional, 2},
     {"_phaseR_phaseR_density", (DL_FUNC) &_phaseR_phaseR_density, 1},
     {"_phaseR_phaseR_log_density", (DL_FUNC) &_phaseR_phaseR_log_density, 2},
     {"_phaseR_phaseR_log_density_gradient", (DL_FUNC) &_phaseR_phaseR_log_density_gradient, 2},

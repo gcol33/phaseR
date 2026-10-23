@@ -22,15 +22,29 @@ from the Gaussian approximation}
 Raw fit object with same structure as HMC backend
 }
 \description{
-Fast approximate inference using the Laplace approximation.
-Finds the posterior mode and approximates the posterior as
-Gaussian with covariance equal to the inverse Hessian.
+Approximates the posterior by a Gaussian at its mode. In a model with
+random effects the effects u are integrated out first: for the other
+parameters theta (coefficients, log SDs, Cholesky factors) the marginal
+posterior is approximated by the Laplace formula
+\verb{p(theta | y) ~ p(theta, u*(theta) | y) (2 pi)^(n_u / 2) det(A)^(-1/2)},
+with \code{u*(theta)} the mode of the effects given theta and \code{A} the negative
+Hessian of the log posterior in u there (Tierney and Kadane 1986; the
+approach of INLA and TMB). The joint mode of (theta, u) does not exist:
+as a random-effect SD shrinks with its effects at zero, the Normal
+density of the effects grows without bound, faster than any proper SD
+prior falls. The marginal posterior of theta is bounded, so its mode is
+well defined. theta is drawn from the Gaussian at that mode, with
+covariance the inverse negative Hessian of the log marginal (central
+differences of its exact gradient), and u given theta from
+\verb{u*(theta_hat) + du*/dtheta (theta - theta_hat) + N(0, A^-1)}. In a model
+without random effects this is the Gaussian approximation at the joint
+mode.
 }
 \details{
 The log posterior of a phase model is multimodal: a mode in which a phase
 is never entered leaves that phase's parameters at their prior. The mode
 is therefore searched from \code{n_starts} starting points built from
 provisional phase assignments (\code{\link[=initial_values]{initial_values()}}), and the start reaching
-the highest log posterior is kept.
+the highest log marginal posterior is kept.
 }
 \keyword{internal}

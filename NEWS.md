@@ -1,5 +1,30 @@
 # phaseR (development version)
 
+* The Laplace backend integrates random effects out before it looks for a
+  mode. It approximated the joint posterior of all parameters by a Gaussian
+  at its mode, but with random effects that mode does not exist: the SDs
+  are already parameterised by their logarithm with the Jacobian included,
+  yet as a random-effect SD shrinks with its effects at zero, the Normal
+  density of the G effects grows like SD^-G while a proper SD prior times
+  the Jacobian falls only like SD. The optimiser ran towards zero SD and
+  the Hessian there was singular ("Hessian not invertible, using
+  pseudo-inverse", a ridge and an eigenvalue shift then made it
+  invertible). The marginal posterior of the other parameters, with the
+  effects integrated out by the Laplace formula (Tierney and Kadane 1986,
+  as in INLA and TMB: the mode of the effects given the parameters, and the
+  log determinant of the negative Hessian in the effects there), is bounded
+  and has a proper mode. The backend maximises it with its exact gradient
+  (third derivatives by forward-mode dual numbers through the exact
+  gradient of the log posterior), takes the covariance from the Hessian of
+  the log marginal, and draws the effects given the parameters from their
+  Gaussian, linearised in the parameters. The ridge, the pseudo-inverse and
+  the eigenvalue shift are gone; a Hessian that is not positive definite
+  now stops the fit with a message. On a random-intercept model (60 units x
+  5 times, 10 sites) Laplace means agree with NUTS within 0.5 posterior SD
+  (0.75 for the skewed log SDs of the random effects) and its SDs within
+  a factor of 1.25 (1.5). Models without random effects get the same
+  Gaussian at the joint mode as before.
+
 * The Laplace backend searches the posterior mode from data-informed
   starting points instead of all-zero parameters, and NUTS chains start
   from them. A phase model's posterior has a mode in which no unit enters a

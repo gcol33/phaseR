@@ -340,8 +340,9 @@ test_that("Custom priors with random effects (Laplace backend)", {
     re ~ half_cauchy(0.5)
   )
 
-  fit <- fit_phaseR(model, data, backend = "laplace",
-                    prior = custom_prior, seed = 444)
+  expect_no_warning(
+    fit <- fit_phaseR(model, data, backend = "laplace",
+                      prior = custom_prior, seed = 444))
 
   expect_s3_class(fit, "phase_fit")
   expect_true(fit$has_re)

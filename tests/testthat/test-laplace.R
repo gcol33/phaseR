@@ -114,7 +114,8 @@ test_that("Laplace works with random effects", {
     dynamics("treatment", y ~ x)
   )
 
-  fit <- fit_phaseR(model, data, backend = "laplace", seed = 444)
+  expect_no_warning(
+    fit <- fit_phaseR(model, data, backend = "laplace", seed = 444))
 
   expect_s3_class(fit, "phase_fit")
   expect_true(fit$has_re)
@@ -142,7 +143,8 @@ test_that("Laplace works with crossed random effects", {
     dynamics("post", y ~ x)
   )
 
-  fit <- fit_phaseR(model, data, backend = "laplace", seed = 666)
+  expect_no_warning(
+    fit <- fit_phaseR(model, data, backend = "laplace", seed = 666))
 
   expect_s3_class(fit, "phase_fit")
   expect_true(any(grepl("site", fit$param_names)))
@@ -258,26 +260,4 @@ test_that("build_neg_log_posterior returns finite values", {
   # Test at random values
   val_rand <- neg_lp(rnorm(stan_data$n_params, 0, 0.5))
   expect_true(is.finite(val_rand))
-})
-
-
-test_that("sample_mvnorm produces correct samples", {
-  set.seed(1515)
-
-  mu <- c(1, 2, 3)
-  sigma <- matrix(c(1, 0.5, 0.3,
-                    0.5, 2, 0.4,
-                    0.3, 0.4, 1.5), nrow = 3)
-
-  samples <- phaseR:::sample_mvnorm(10000, mu, sigma)
-
-  expect_equal(dim(samples), c(10000, 3))
-
-  # Sample mean should be close to mu
-  sample_mean <- colMeans(samples)
-  expect_true(all(abs(sample_mean - mu) < 0.1))
-
-  # Sample covariance should be close to sigma
-  sample_cov <- cov(samples)
-  expect_true(all(abs(sample_cov - sigma) < 0.15))
 })

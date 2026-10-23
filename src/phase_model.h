@@ -66,6 +66,14 @@ public:
 
   int dim() const { return n_params_; }
 
+  // Parameter indices of the random effects of every term (the effects, not
+  // their covariance parameters), in increasing order.
+  std::vector<int> random_effect_indices() const;
+
+  // For each unit, the indices of the random effects its likelihood depends
+  // on, in increasing order.
+  std::vector<std::vector<int> > unit_random_effects() const;
+
   // Log posterior at q (length dim()). Unless grad is null, writes its
   // gradient into grad (length dim()).
   template <class T>

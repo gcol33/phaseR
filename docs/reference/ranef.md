@@ -1,6 +1,8 @@
 # Extract random effects
 
-Extract random effects
+Posterior summaries of the random-effect coefficients of every level:
+the effects themselves for intercept and uncorrelated terms, and
+`diag(sigma) L z` for correlated terms.
 
 ## Usage
 
@@ -33,7 +35,10 @@ ranef(
 
 ## Value
 
-A data frame with random effect estimates
+With `summary = TRUE`, a data frame with one row per predictor, grouping
+term, level and coefficient and the posterior mean, SD and quantiles.
+With `summary = FALSE`, a named list of arrays of draws indexed
+`[draw, level, coefficient]`, one per predictor and term.
 
 ## Examples
 

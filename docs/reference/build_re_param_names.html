@@ -62,7 +62,12 @@
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">build_re_param_names</span><span class="op">(</span><span class="va">component</span>, <span class="va">re_name</span>, <span class="va">re_info</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">build_re_param_names</span><span class="op">(</span></span>
+<span>  <span class="va">component</span>,</span>
+<span>  <span class="va">re_name</span>,</span>
+<span>  <span class="va">re_info</span>,</span>
+<span>  transition <span class="op">=</span> <span class="va">component</span> <span class="op">==</span> <span class="st">"trans"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -70,7 +75,8 @@
 
 
 <dl><dt id="arg-component">component<a class="anchor" aria-label="anchor" href="#arg-component"></a></dt>
-<dd><p>Component name (e.g., "trans", "baseline")</p></dd>
+<dd><p>Label of the linear predictor (e.g. "trans", a phase
+name)</p></dd>
 
 
 <dt id="arg-re-name">re_name<a class="anchor" aria-label="anchor" href="#arg-re-name"></a></dt>
@@ -79,6 +85,11 @@
 
 <dt id="arg-re-info">re_info<a class="anchor" aria-label="anchor" href="#arg-re-info"></a></dt>
 <dd><p>RE info structure from build_multi_re</p></dd>
+
+
+<dt id="arg-transition">transition<a class="anchor" aria-label="anchor" href="#arg-transition"></a></dt>
+<dd><p>Whether the term belongs to a transition predictor
+(effects named <code>u_...</code>) or a dynamics predictor (<code>v_...</code>)</p></dd>
 
 </dl></div>
     <div class="section level2">

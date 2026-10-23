@@ -144,11 +144,23 @@ from the Gaussian approximation</p></dd>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>The log posterior of a phase model is multimodal: a mode in which a phase
+    <p>Given theta the log posterior splits over blocks of effects that share no
+unit (one block per unit for unit-level effects, one block per level of a
+grouping factor nested in the units), so <code>A</code> is block diagonal and the
+mode of the effects is found by Newton's method from <code>u = 0</code> in each block
+separately. When the effects of a block have several modes given theta,
+for example unit-level effects in phases whose timing is uncertain, the
+approximation can become degenerate where two modes merge; the fit then
+stops or, if several modes remain at the optimum, warns, and the HMC
+backend is the reliable choice.</p>
+<p>The log posterior of a phase model is multimodal: a mode in which a phase
 is never entered leaves that phase's parameters at their prior. The mode
 is therefore searched from <code>n_starts</code> starting points built from
 provisional phase assignments (<code><a href="initial_values.html">initial_values()</a></code>), and the start reaching
-the highest log marginal posterior is kept.</p>
+the highest log marginal posterior is kept. With random effects, each
+start is first moved to the mode of the fixed effects with the effects at
+zero (<code><a href="fixed_effects_mode.html">fixed_effects_mode()</a></code>), and starts that arrive at the same point
+share one search.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

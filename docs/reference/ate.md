@@ -1,7 +1,11 @@
 # Average treatment effect
 
-Compute the average treatment effect by comparing counterfactual
-outcomes under treatment vs control conditions.
+The effect of setting `treatment_var` to `treat_value` against
+`control_value` for every observation, on the expected outcome given the
+covariates: for each posterior draw, the expected outcome integrates
+over the phase each observation is in, so a treatment that changes the
+transition probabilities acts through the phase as well as through the
+dynamics. The effect is averaged over the observations of the data.
 
 ## Usage
 
@@ -29,7 +33,7 @@ ate(object, treatment_var, treat_value = 1, control_value = 0, n_sims = NULL)
 
 - n_sims:
 
-  Number of posterior draws
+  Number of posterior draws (default: all)
 
 ## Value
 
@@ -41,7 +45,7 @@ A list with:
 
 - `ate_ci`: 95% credible interval
 
-- `samples`: Vector of ATE samples
+- `samples`: Vector of ATE samples, one per draw
 
 ## Examples
 

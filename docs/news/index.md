@@ -2,6 +2,109 @@
 
 ## phaseR (development version)
 
+- The Laplace backend is faster for models with random effects: on 80
+  units with 12 sites it takes 0.37 s instead of 1.61 s for site
+  intercepts in both phases and 0.45 s instead of 4.23 s for a
+  correlated site slope, with the same mode (to 0.002 posterior SD). The
+  gradient of the log marginal now costs one third-derivative pass per
+  colour of the effects and one Hessian-vector product, instead of one
+  per colour and parameter; the Hessian in the effects is block diagonal
+  over groups of effects that share no unit and is factorised block by
+  block, with Newton’s method run in each block separately; and each
+  starting point is first moved to the mode of the fixed effects with
+  the effects at zero, so starts that arrive at the same point share one
+  search. The mode of the effects is still found from `u = 0` at every
+  parameter value, so the approximation remains a function of the
+  parameters.
+
+- A Laplace search that reaches parameters where the mode of the random
+  effects is degenerate or not finite stops that start instead of
+  looping forever, and the fit reports when this happened from every
+  start or when the effects of some groups have several modes at the
+  optimum (`diagnostics$multimodal_groups`). `diagnostics$cov` is the
+  covariance of the parameters outside the random effects;
+  `diagnostics$se` covers all.
+
+- Correlated random effects, `(1 + x | group)`, are parameterised by the
+  log SD of each coefficient and the Cholesky factor of their
+  correlation matrix, built from canonical partial correlations (the
+  transform of Lewandowski, Kurowicka and Joe 2009 that Stan uses). The
+  coefficients are `diag(sigma) L z` with standardised effects `z`; the
+  SDs get the random-effect prior (`re ~`) and the correlation matrix
+  exactly the `cor ~ lkj(eta)` prior, Jacobians included. The previous
+  parameterisation, a free lower-triangular factor of the covariance,
+  combined an LKJ-type term on its diagonal with the random-effect prior
+  reflected onto it; that was not the LKJ density of any correlation
+  matrix, and the factor’s sign made its posterior bimodal. Parameters
+  are named `log_sigma_<component>_re_<group>_<coef>` and
+  `atanh_cpc_<component>_re_<group>_<i>_<j>`.
+
+- [`ranef()`](https://gillescolling.com/phaseR/reference/ranef.md) and
+  [`VarCorr()`](https://gillescolling.com/phaseR/reference/VarCorr.md)
+  read the random effects from the model description.
+  [`ranef()`](https://gillescolling.com/phaseR/reference/ranef.md)
+  returns the coefficients of every level (`diag(sigma) L z` for
+  correlated terms, which it returned as the standardised `z`) as one
+  data frame with a row per predictor, term, level and coefficient, and
+  found the levels of dynamics terms by phase name (it looked them up
+  under `phase_0`/`phase_1` and fell back to `group_1`, …).
+  [`VarCorr()`](https://gillescolling.com/phaseR/reference/VarCorr.md)
+  returns for every term the SD of each coefficient and the posterior
+  mean correlation matrix.
+
+- Models with more than two phases take outcome families and random
+  effects like two-phase models.
+  [`prepare_stan_data()`](https://gillescolling.com/phaseR/reference/prepare_stan_data.md)
+  built them with Gaussian dynamics and the fixed part of each formula,
+  dropping `family` and every random-effect term without a message. One
+  data preparation now serves every number of phases; it matches each
+  [`dynamics()`](https://gillescolling.com/phaseR/reference/dynamics.md)
+  and
+  [`transition()`](https://gillescolling.com/phaseR/reference/transition.md)
+  to its phases by name (a two-phase model read its dynamics in the
+  order given), uses an intercept-only Gaussian model for a phase
+  without
+  [`dynamics()`](https://gillescolling.com/phaseR/reference/dynamics.md),
+  and rejects a transition that skips a phase, which the left-to-right
+  phase process cannot represent.
+
+- Predictions, counterfactuals and treatment effects are computed by the
+  model both backends fit (`src/phase_model.h`) instead of R copies of
+  the two-phase Gaussian recursion, so they cover every model: k phases,
+  Poisson and binomial dynamics and random effects (levels the fit has
+  not seen contribute no effect). For two Gaussian phases without random
+  effects, `posterior_predict(type = "phase")` and
+  `predict(type = "transition")` are unchanged. Other changes:
+
+  - [`posterior_predict()`](https://gillescolling.com/phaseR/reference/posterior_predict.md)
+    returns rows in the order of `newdata`; it returned them sorted by
+    unit and time, so
+    [`ite()`](https://gillescolling.com/phaseR/reference/ite.md) matched
+    effects to the wrong units when the data were not sorted.
+    `type = "phase"` gains `phase`, the phase whose probability is
+    returned (default: the last).
+  - `predict(type = "phase")` and `predict(type = "response")` average
+    over the posterior draws; they used the transition coefficients at
+    their posterior mean, and `"response"` ignored the outcome family
+    (link) and the random effects. `predict(type = "transition")`
+    returns one element per move for models with more than two phases.
+  - [`ate()`](https://gillescolling.com/phaseR/reference/ate.md) and
+    [`ite()`](https://gillescolling.com/phaseR/reference/ite.md)
+    contrast the expected outcomes under treatment and control,
+    integrating over the phases, for the same posterior draws. They
+    contrasted two independent outcome simulations, from separately
+    sampled draws when `n_sims` was set, which added outcome noise to
+    the effect’s interval.
+  - [`fitted()`](https://rdrr.io/r/stats/fitted.values.html) returns the
+    one-step predictive mean E(y_t \| y_0, …, y\_(t-1)) of each
+    observation, [`residuals()`](https://rdrr.io/r/stats/residuals.html)
+    the corresponding residuals (Pearson residuals divide by the
+    predictive SD), and
+    [`logLik()`](https://rdrr.io/r/stats/logLik.html) the log-likelihood
+    marginalised over the phases at the posterior mean. They used a
+    Gaussian density around phase-averaged predictions with the average
+    residual SD.
+
 - The Cholesky factor of correlated random effects with three or more
   coefficients is named in the order the likelihood and
   [`VarCorr()`](https://gillescolling.com/phaseR/reference/VarCorr.md)

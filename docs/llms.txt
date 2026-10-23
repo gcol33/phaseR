@@ -188,10 +188,10 @@ interval:
 
 effect <- ate(fit, treatment_var = "x")
 effect$ate
-#> [1] -0.3790779
+#> [1] -0.3814839
 effect$ate_ci
 #>       2.5%      97.5% 
-#> -0.7154333 -0.0678609
+#> -0.6028164 -0.1524811
 ```
 
 [`counterfactual()`](https://gillescolling.com/phaseR/reference/counterfactual.md)

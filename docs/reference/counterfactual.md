@@ -1,7 +1,9 @@
 # Counterfactual prediction
 
-Predict outcomes under hypothetical covariate values, integrating over
-phase uncertainty.
+Simulates outcomes under hypothetical covariate values with
+[`posterior_predict()`](https://gillescolling.com/phaseR/reference/posterior_predict.md):
+every unit moves through the phases with the transition probabilities of
+`newdata` and draws its outcomes from the dynamics of its current phase.
 
 ## Usage
 
@@ -31,7 +33,9 @@ A list with:
 
 - `sd`: SD of predicted outcome per observation
 
-- `samples`: Matrix of samples (rows = obs, cols = draws)
+- `lower`, `upper`: 2.5% and 97.5% quantiles per observation
+
+- `samples`: Matrix of samples (rows = rows of `newdata`, cols = draws)
 
 ## Examples
 

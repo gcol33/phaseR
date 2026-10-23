@@ -53,9 +53,23 @@ Raw fit object with same structure as HMC backend
 
 ## Details
 
+Given theta the log posterior splits over blocks of effects that share
+no unit (one block per unit for unit-level effects, one block per level
+of a grouping factor nested in the units), so `A` is block diagonal and
+the mode of the effects is found by Newton's method from `u = 0` in each
+block separately. When the effects of a block have several modes given
+theta, for example unit-level effects in phases whose timing is
+uncertain, the approximation can become degenerate where two modes
+merge; the fit then stops or, if several modes remain at the optimum,
+warns, and the HMC backend is the reliable choice.
+
 The log posterior of a phase model is multimodal: a mode in which a
 phase is never entered leaves that phase's parameters at their prior.
 The mode is therefore searched from `n_starts` starting points built
 from provisional phase assignments
 ([`initial_values()`](https://gillescolling.com/phaseR/reference/initial_values.md)),
-and the start reaching the highest log marginal posterior is kept.
+and the start reaching the highest log marginal posterior is kept. With
+random effects, each start is first moved to the mode of the fixed
+effects with the effects at zero
+([`fixed_effects_mode()`](https://gillescolling.com/phaseR/reference/fixed_effects_mode.md)),
+and starts that arrive at the same point share one search.

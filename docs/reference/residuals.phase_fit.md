@@ -1,7 +1,10 @@
 # Extract residuals from phase_fit
 
-Computes residuals (observed - fitted) marginalized over phase
-uncertainty.
+One-step prediction residuals: the observed outcome minus
+[`fitted()`](https://rdrr.io/r/stats/fitted.values.html), divided for
+`type = "pearson"` by the SD of the one-step predictive distribution
+(phase mixture of the family variances, plus the posterior variance of
+the predictive mean).
 
 ## Usage
 

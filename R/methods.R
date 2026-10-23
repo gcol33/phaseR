@@ -259,7 +259,7 @@ coef.phase_fit <- function(object, ...) {
 #' Extract fitted values from phase_fit
 #'
 #' The posterior mean of the one-step predictive mean of each observation,
-#' E(y_t | y_0, ..., y_{t-1}): the outcome mean of each phase weighted by
+#' E(y_t | y_0, ..., y_(t-1)): the outcome mean of each phase weighted by
 #' the probability of the phase given the unit's earlier outcomes.
 #'
 #' @param object A `phase_fit` object
@@ -299,7 +299,7 @@ residuals.phase_fit <- function(object, type = c("response", "pearson"), ...) {
 #'
 #' @param object A `phase_fit` object
 #' @return List with `mean` and `var` per row of the data: the predictive
-#'   mean and variance of y_t given y_0, ..., y_{t-1}, over the posterior
+#'   mean and variance of y_t given y_0, ..., y_(t-1), over the posterior
 #' @keywords internal
 one_step_moments <- function(object) {
   s <- phase_summaries(object, object$data, object$draws)

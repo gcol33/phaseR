@@ -16,6 +16,6 @@ Numeric vector of fitted values, one per row of the data
 }
 \description{
 The posterior mean of the one-step predictive mean of each observation,
-E(y_t | y_0, ..., y_{t-1}): the outcome mean of each phase weighted by
+E(y_t | y_0, ..., y_(t-1)): the outcome mean of each phase weighted by
 the probability of the phase given the unit's earlier outcomes.
 }

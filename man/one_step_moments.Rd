@@ -11,7 +11,7 @@ one_step_moments(object)
 }
 \value{
 List with \code{mean} and \code{var} per row of the data: the predictive
-mean and variance of y_t given y_0, ..., y_{t-1}, over the posterior
+mean and variance of y_t given y_0, ..., y_(t-1), over the posterior
 }
 \description{
 Moments of the one-step predictive distribution

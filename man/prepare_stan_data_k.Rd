@@ -12,7 +12,8 @@ prepare_stan_data_k(
   n_units,
   k_phases,
   phase_names,
-  response_var
+  response_var,
+  prior_cpp
 )
 }
 \description{

@@ -9,7 +9,8 @@
 #'   with step-size and diagonal-metric adaptation during warmup, or
 #'   "laplace", a Gaussian approximation at the posterior mode
 #' @param cores Number of cores for parallel chains (default 1)
-#' @param prior Prior specification from `prior()` (default: weakly informative)
+#' @param prior Prior specification from `prior()` (default: weakly
+#'   informative); both backends evaluate it for every model family
 #' @param seed Integer seed. Two fits with the same `seed`, data and settings
 #'   return identical draws. With `seed = NULL` the seed is drawn from R's
 #'   random number generator, so `set.seed()` before the call makes the fit
@@ -122,7 +123,8 @@ prepare_stan_data <- function(model, data, prior = NULL) {
   # Dispatch to k-phase or 2-phase data preparation
   if (k_phases > 2) {
     return(prepare_stan_data_k(model, data, unit_start, unit_end, n_units,
-                                k_phases, phase_names, response_var))
+                                k_phases, phase_names, response_var,
+                                prior_cpp))
   }
 
   # Original 2-phase logic
@@ -433,7 +435,8 @@ encode_family <- function(family) {
 #' Prepare data for k-phase C++ likelihood
 #' @keywords internal
 prepare_stan_data_k <- function(model, data, unit_start, unit_end, n_units,
-                                 k_phases, phase_names, response_var) {
+                                 k_phases, phase_names, response_var,
+                                 prior_cpp) {
 
   # Build design matrices for each transition and each phase dynamics
   # Transitions: k-1 (from phase i to i+1)
@@ -530,6 +533,7 @@ prepare_stan_data_k <- function(model, data, unit_start, unit_end, n_units,
     n_params = n_params,
     param_names = param_names,
     phase_names = phase_names,
+    prior_cpp = prior_cpp,
     # k-phase models don't support RE yet
     has_re = FALSE,
     has_trans_re = FALSE,

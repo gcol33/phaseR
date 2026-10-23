@@ -1,6 +1,7 @@
 #include <Rcpp.h>
 #include <cmath>
 #include <vector>
+#include "prior_functions.h"
 
 using namespace Rcpp;
 
@@ -42,7 +43,6 @@ inline double log_dnorm_k(double y, double mu, double sigma) {
 }
 
 
-// [[Rcpp::export]]
 double phase_log_likelihood_k(
     NumericVector params,
     List data,
@@ -164,50 +164,27 @@ double phase_log_likelihood_k(
 }
 
 
-// [[Rcpp::export]]
 double phase_log_prior_k(
     NumericVector params,
     IntegerVector n_dyn_coef,
     IntegerVector n_trans_coef,
-    int k_phases
+    int k_phases,
+    const prior::PriorSet& pr
 ) {
-  double log_prior = 0.0;
   int idx = 0;
-
-  // Transition coefficients priors
-  for (int tr = 0; tr < k_phases - 1; tr++) {
-    for (int j = 0; j < n_trans_coef[tr]; j++) {
-      double x = params[idx++];
-      log_prior += -0.5 * std::log(2.0 * M_PI * 6.25) - 0.5 * x * x / 6.25;
-    }
-  }
-
-  // Dynamics coefficients priors
-  for (int p = 0; p < k_phases; p++) {
-    for (int j = 0; j < n_dyn_coef[p]; j++) {
-      double x = params[idx++];
-      log_prior += -0.5 * std::log(2.0 * M_PI * 6.25) - 0.5 * x * x / 6.25;
-    }
-  }
-
-  // Sigma priors
-  for (int p = 0; p < k_phases; p++) {
-    double log_sigma = params[idx++];
-    log_prior += -0.5 * std::log(2.0 * M_PI) - 0.5 * log_sigma * log_sigma;
-  }
-
-  return log_prior;
+  int n_beta = Rcpp::sum(n_trans_coef) + Rcpp::sum(n_dyn_coef);
+  return prior::log_prior_fixed(params, idx, n_beta, k_phases, pr);
 }
 
 
-// [[Rcpp::export]]
 double phase_log_posterior_k(
     NumericVector params,
     List data,
     IntegerVector n_dyn_coef,
     IntegerVector n_trans_coef,
-    int k_phases
+    int k_phases,
+    const prior::PriorSet& pr
 ) {
   return phase_log_likelihood_k(params, data, n_dyn_coef, n_trans_coef, k_phases) +
-         phase_log_prior_k(params, n_dyn_coef, n_trans_coef, k_phases);
+         phase_log_prior_k(params, n_dyn_coef, n_trans_coef, k_phases, pr);
 }

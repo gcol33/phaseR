@@ -13,6 +13,7 @@ build_neg_log_posterior(stan_data)
 Function of parameter vector returning negative log posterior
 }
 \description{
-Creates a function that computes -log p(theta | y) for use with optim().
+Creates a function that computes -log p(theta | y) for use with optim(),
+from the same model description and prior the NUTS backend samples.
 }
 \keyword{internal}

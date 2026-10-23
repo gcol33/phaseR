@@ -159,6 +159,103 @@ inline double log_prior_cor(const Rcpp::NumericVector& L_lower, int d, int type,
   return log_lkj_chol(L_lower, d, params[0]);  // params[0] = eta
 }
 
+// Evaluate a positive-parameter prior on a real-valued scale whose sign is
+// not identified (the diagonal of a Cholesky factor): the half distribution
+// reflected to the whole real line, Normal(0, sd) or Cauchy(0, scale).
+inline double log_prior_symmetric_scale(double x, int type,
+                                        const Rcpp::NumericVector& params) {
+  switch (type) {
+    case 3:  // half_normal(sd)
+      return log_normal(x, 0.0, params[0]);
+    case 4:  // half_cauchy(scale)
+      return log_cauchy(x, 0.0, params[0]);
+    default:
+      Rcpp::stop("Invalid prior type for positive parameter: %d", type);
+      return -INFINITY;
+  }
+}
+
+
+// =============================================================================
+// Prior of a fit
+// =============================================================================
+
+// The prior of each parameter class, as built by prior_to_cpp() in R:
+// regression coefficients (beta), residual SDs (sigma), random-effect SDs
+// (re) and random-effect correlations (cor). SDs are sampled on the log
+// scale, so sigma() and re_sd() include the Jacobian of exp().
+class PriorSet {
+public:
+  explicit PriorSet(const Rcpp::List& p)
+    : beta_type_(Rcpp::as<int>(p["beta_type"])),
+      beta_params_(Rcpp::as<Rcpp::NumericVector>(p["beta_params"])),
+      sigma_type_(Rcpp::as<int>(p["sigma_type"])),
+      sigma_params_(Rcpp::as<Rcpp::NumericVector>(p["sigma_params"])),
+      re_type_(Rcpp::as<int>(p["re_type"])),
+      re_params_(Rcpp::as<Rcpp::NumericVector>(p["re_params"])),
+      cor_type_(Rcpp::as<int>(p["cor_type"])),
+      cor_params_(Rcpp::as<Rcpp::NumericVector>(p["cor_params"])) {
+    if (cor_type_ != 5) {
+      Rcpp::stop("Invalid prior type for correlation: %d", cor_type_);
+    }
+  }
+
+  double beta(double x) const {
+    return log_prior_unbounded(x, beta_type_, beta_params_);
+  }
+
+  double sigma(double log_sigma) const {
+    return log_prior_positive(log_sigma, sigma_type_, sigma_params_);
+  }
+
+  double re_sd(double log_sigma) const {
+    return log_prior_positive(log_sigma, re_type_, re_params_);
+  }
+
+  double re_scale(double x) const {
+    return log_prior_symmetric_scale(x, re_type_, re_params_);
+  }
+
+  double cor_eta() const { return cor_params_[0]; }
+
+private:
+  int beta_type_;
+  Rcpp::NumericVector beta_params_;
+  int sigma_type_;
+  Rcpp::NumericVector sigma_params_;
+  int re_type_;
+  Rcpp::NumericVector re_params_;
+  int cor_type_;
+  Rcpp::NumericVector cor_params_;
+};
+
+// Log prior of the leading block of every phase model's parameter vector:
+// n_beta regression coefficients followed by n_sigma log residual SDs.
+// Advances idx past the block.
+inline double log_prior_fixed(const Rcpp::NumericVector& params, int& idx,
+                              int n_beta, int n_sigma, const PriorSet& pr) {
+  double lp = 0.0;
+  for (int j = 0; j < n_beta; j++) lp += pr.beta(params[idx++]);
+  for (int s = 0; s < n_sigma; s++) lp += pr.sigma(params[idx++]);
+  return lp;
+}
+
+// Log prior of a random-intercept block: n_groups effects
+// u_g ~ Normal(0, sigma_re) followed by log(sigma_re), whose prior is the
+// random-effect SD prior. Advances idx past the block.
+inline double log_prior_re_intercepts(const Rcpp::NumericVector& params,
+                                      int& idx, int n_groups,
+                                      const PriorSet& pr) {
+  double log_sigma_re = params[idx + n_groups];
+  double lp = 0.0;
+  for (int g = 0; g < n_groups; g++) {
+    lp += log_normal(params[idx++], 0.0, std::exp(log_sigma_re));
+  }
+  lp += pr.re_sd(log_sigma_re);
+  idx++;
+  return lp;
+}
+
 }  // namespace prior
 
 #endif  // PRIOR_FUNCTIONS_H

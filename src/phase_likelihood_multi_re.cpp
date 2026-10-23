@@ -2,6 +2,7 @@
 #include <cmath>
 #include <vector>
 #include "phase_data.h"
+#include "prior_functions.h"
 
 using namespace Rcpp;
 
@@ -23,7 +24,6 @@ inline double log_dnorm_m(double y, double mu, double sigma) {
   return -0.5 * std::log(2.0 * M_PI) - std::log(sigma) - 0.5 * z * z;
 }
 
-// [[Rcpp::export]]
 double phase_log_likelihood_multi_re(
     NumericVector params,
     List data,
@@ -186,7 +186,6 @@ double phase_log_likelihood_multi_re(
 }
 
 
-// [[Rcpp::export]]
 double phase_log_prior_multi_re(
     NumericVector params,
     int n_trans_coef,
@@ -194,93 +193,25 @@ double phase_log_prior_multi_re(
     int n_dyn_coef_1,
     List trans_re_info,
     List dyn_re_info_0,
-    List dyn_re_info_1
+    List dyn_re_info_1,
+    const prior::PriorSet& pr
 ) {
-
-  double log_prior = 0.0;
   int idx = 0;
+  double log_prior = prior::log_prior_fixed(
+    params, idx, n_trans_coef + n_dyn_coef_0 + n_dyn_coef_1, 2, pr);
 
-  // Fixed effects priors: Normal(0, 2.5)
-  for (int j = 0; j < n_trans_coef; j++) {
-    double x = params[idx++];
-    log_prior += -0.5 * std::log(2.0 * M_PI * 6.25) - 0.5 * x * x / 6.25;
-  }
-  for (int j = 0; j < n_dyn_coef_0; j++) {
-    double x = params[idx++];
-    log_prior += -0.5 * std::log(2.0 * M_PI * 6.25) - 0.5 * x * x / 6.25;
-  }
-  for (int j = 0; j < n_dyn_coef_1; j++) {
-    double x = params[idx++];
-    log_prior += -0.5 * std::log(2.0 * M_PI * 6.25) - 0.5 * x * x / 6.25;
-  }
-
-  // Residual SD priors: Normal(0, 1) on log scale
-  double log_sigma_0 = params[idx++];
-  double log_sigma_1 = params[idx++];
-  log_prior += -0.5 * std::log(2.0 * M_PI) - 0.5 * log_sigma_0 * log_sigma_0;
-  log_prior += -0.5 * std::log(2.0 * M_PI) - 0.5 * log_sigma_1 * log_sigma_1;
-
-  // Transition RE priors
-  int n_trans_re_terms = trans_re_info["n_terms"];
-  IntegerVector trans_n_groups = trans_re_info["n_groups_vec"];
-
-  for (int r = 0; r < n_trans_re_terms; r++) {
-    int n_g = trans_n_groups[r];
-    double log_sigma_re = params[idx + n_g];  // sigma is after the RE values
-    double sigma_re = std::exp(log_sigma_re);
-    double sigma_re_sq = sigma_re * sigma_re;
-
-    // RE values: Normal(0, sigma_re)
-    for (int g = 0; g < n_g; g++) {
-      double u = params[idx++];
-      log_prior += -0.5 * std::log(2.0 * M_PI) - std::log(sigma_re) - 0.5 * u * u / sigma_re_sq;
+  const List infos[3] = {trans_re_info, dyn_re_info_0, dyn_re_info_1};
+  for (int c = 0; c < 3; c++) {
+    int n_terms = infos[c]["n_terms"];
+    IntegerVector n_groups = infos[c]["n_groups_vec"];
+    for (int r = 0; r < n_terms; r++) {
+      log_prior += prior::log_prior_re_intercepts(params, idx, n_groups[r], pr);
     }
-    // Hyperprior on sigma_re: Half-Normal(0, 0.5) on log scale
-    log_prior += -0.5 * std::log(2.0 * M_PI * 0.25) - 0.5 * log_sigma_re * log_sigma_re / 0.25;
-    idx++;  // move past log_sigma_re
   }
-
-  // Dynamics 0 RE priors
-  int n_dyn_re_terms_0 = dyn_re_info_0["n_terms"];
-  IntegerVector dyn_n_groups_0 = dyn_re_info_0["n_groups_vec"];
-
-  for (int r = 0; r < n_dyn_re_terms_0; r++) {
-    int n_g = dyn_n_groups_0[r];
-    double log_sigma_re = params[idx + n_g];
-    double sigma_re = std::exp(log_sigma_re);
-    double sigma_re_sq = sigma_re * sigma_re;
-
-    for (int g = 0; g < n_g; g++) {
-      double v = params[idx++];
-      log_prior += -0.5 * std::log(2.0 * M_PI) - std::log(sigma_re) - 0.5 * v * v / sigma_re_sq;
-    }
-    log_prior += -0.5 * std::log(2.0 * M_PI * 0.25) - 0.5 * log_sigma_re * log_sigma_re / 0.25;
-    idx++;
-  }
-
-  // Dynamics 1 RE priors
-  int n_dyn_re_terms_1 = dyn_re_info_1["n_terms"];
-  IntegerVector dyn_n_groups_1 = dyn_re_info_1["n_groups_vec"];
-
-  for (int r = 0; r < n_dyn_re_terms_1; r++) {
-    int n_g = dyn_n_groups_1[r];
-    double log_sigma_re = params[idx + n_g];
-    double sigma_re = std::exp(log_sigma_re);
-    double sigma_re_sq = sigma_re * sigma_re;
-
-    for (int g = 0; g < n_g; g++) {
-      double v = params[idx++];
-      log_prior += -0.5 * std::log(2.0 * M_PI) - std::log(sigma_re) - 0.5 * v * v / sigma_re_sq;
-    }
-    log_prior += -0.5 * std::log(2.0 * M_PI * 0.25) - 0.5 * log_sigma_re * log_sigma_re / 0.25;
-    idx++;
-  }
-
   return log_prior;
 }
 
 
-// [[Rcpp::export]]
 double phase_log_posterior_multi_re(
     NumericVector params,
     List data,
@@ -289,10 +220,11 @@ double phase_log_posterior_multi_re(
     int n_dyn_coef_1,
     List trans_re_info,
     List dyn_re_info_0,
-    List dyn_re_info_1
+    List dyn_re_info_1,
+    const prior::PriorSet& pr
 ) {
   return phase_log_likelihood_multi_re(params, data, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1,
                                         trans_re_info, dyn_re_info_0, dyn_re_info_1) +
          phase_log_prior_multi_re(params, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1,
-                                   trans_re_info, dyn_re_info_0, dyn_re_info_1);
+                                   trans_re_info, dyn_re_info_0, dyn_re_info_1, pr);
 }

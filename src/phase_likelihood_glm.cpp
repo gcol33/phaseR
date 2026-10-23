@@ -2,6 +2,7 @@
 #include <cmath>
 #include <vector>
 #include "phase_data.h"
+#include "prior_functions.h"
 
 using namespace Rcpp;
 
@@ -63,7 +64,6 @@ inline double log_emission(double y, double mu, double sigma, int family, int n_
 }
 
 
-// [[Rcpp::export]]
 double phase_log_likelihood_glm(
     NumericVector params,
     List data,
@@ -145,49 +145,22 @@ double phase_log_likelihood_glm(
 }
 
 
-// [[Rcpp::export]]
+// Log prior. The residual SDs get the sigma prior for every family; under
+// Poisson and binomial families they do not enter the likelihood, so their
+// posterior is their prior.
 double phase_log_prior_glm(
     NumericVector params,
     int n_trans_coef,
     int n_dyn_coef_0,
     int n_dyn_coef_1,
-    int family_0,
-    int family_1
+    const prior::PriorSet& pr
 ) {
-  double log_prior = 0.0;
   int idx = 0;
-
-  // Transition coefficients
-  for (int j = 0; j < n_trans_coef; j++) {
-    double x = params[idx++];
-    log_prior += -0.5 * std::log(2.0 * M_PI * 6.25) - 0.5 * x * x / 6.25;
-  }
-
-  // Dynamics coefficients
-  for (int j = 0; j < n_dyn_coef_0; j++) {
-    double x = params[idx++];
-    log_prior += -0.5 * std::log(2.0 * M_PI * 6.25) - 0.5 * x * x / 6.25;
-  }
-  for (int j = 0; j < n_dyn_coef_1; j++) {
-    double x = params[idx++];
-    log_prior += -0.5 * std::log(2.0 * M_PI * 6.25) - 0.5 * x * x / 6.25;
-  }
-
-  // Sigma priors (only meaningful for Gaussian)
-  double log_sigma_0 = params[idx++];
-  double log_sigma_1 = params[idx++];
-  if (family_0 == 0) {
-    log_prior += -0.5 * std::log(2.0 * M_PI) - 0.5 * log_sigma_0 * log_sigma_0;
-  }
-  if (family_1 == 0) {
-    log_prior += -0.5 * std::log(2.0 * M_PI) - 0.5 * log_sigma_1 * log_sigma_1;
-  }
-
-  return log_prior;
+  return prior::log_prior_fixed(params, idx,
+                                n_trans_coef + n_dyn_coef_0 + n_dyn_coef_1, 2, pr);
 }
 
 
-// [[Rcpp::export]]
 double phase_log_posterior_glm(
     NumericVector params,
     List data,
@@ -197,10 +170,10 @@ double phase_log_posterior_glm(
     int family_0,
     int family_1,
     int n_trials_0,
-    int n_trials_1
+    int n_trials_1,
+    const prior::PriorSet& pr
 ) {
   return phase_log_likelihood_glm(params, data, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1,
                                    family_0, family_1, n_trials_0, n_trials_1) +
-         phase_log_prior_glm(params, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1,
-                              family_0, family_1);
+         phase_log_prior_glm(params, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, pr);
 }

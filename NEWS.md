@@ -1,5 +1,17 @@
 # phaseR (development version)
 
+* `prior` now applies to every model family under both backends. The HMC
+  backend, and the Laplace backend for GLM, k-phase, crossed random-effect and
+  random-slope models, evaluated hard-coded priors and ignored `prior`. Both
+  backends now evaluate one log posterior per model (`posterior_target()`),
+  whose prior comes from `prior()`. The hard-coded priors differed from the
+  documented defaults, so default fits of those models change: residual SDs
+  get Half-Normal(0, 1) on the SD instead of Normal(0, 1) on its logarithm,
+  random-effect SDs Half-Normal(0, 0.5) instead of Normal(0, 0.5) on the
+  logarithm, and correlated random slopes LKJ(2) instead of LKJ(1). Under
+  Poisson and binomial families the unused residual SDs now get the sigma
+  prior, which makes their posterior proper.
+
 * Each phase of a two-phase model now uses the design matrix of its own
   `dynamics()` formula in the likelihood. The C++ likelihoods computed the
   second phase's mean from the first phase's design matrix, so fits whose two

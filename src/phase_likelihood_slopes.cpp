@@ -2,6 +2,7 @@
 #include <cmath>
 #include <vector>
 #include "phase_data.h"
+#include "prior_functions.h"
 
 using namespace Rcpp;
 
@@ -86,7 +87,6 @@ inline std::vector<double> apply_cholesky(
 }
 
 
-// [[Rcpp::export]]
 double phase_log_likelihood_slopes(
     NumericVector params,
     List data,
@@ -396,7 +396,61 @@ double phase_log_likelihood_slopes(
 }
 
 
-// [[Rcpp::export]]
+// Log prior of the random-effect terms of one model component, in the
+// order the likelihood reads them. Intercept-only terms: effects
+// ~ Normal(0, sigma_re), log(sigma_re) under the random-effect SD prior.
+// Correlated terms: standardised effects ~ Normal(0, 1), an LKJ(eta) term
+// on the Cholesky factor with eta from the correlation prior, and the
+// random-effect SD prior reflected onto each diagonal element. Uncorrelated
+// terms: effects ~ Normal(0, sigma_k), log(sigma_k) under the random-effect
+// SD prior.
+double log_prior_re_terms(const NumericVector& params, int& idx,
+                          const List& re_info, const prior::PriorSet& pr) {
+  int n_terms = Rcpp::as<int>(re_info["n_terms"]);
+  std::vector<int> n_groups = Rcpp::as<std::vector<int>>(re_info["n_groups_vec"]);
+  std::vector<int> n_coefs = Rcpp::as<std::vector<int>>(re_info["n_coefs_vec"]);
+  std::vector<int> correlated = Rcpp::as<std::vector<int>>(re_info["correlated_vec"]);
+
+  double log_prior = 0.0;
+  for (int r = 0; r < n_terms; r++) {
+    int n_g = n_groups[r];
+    int n_c = n_coefs[r];
+
+    if (n_c == 1) {
+      log_prior += prior::log_prior_re_intercepts(params, idx, n_g, pr);
+    } else if (correlated[r]) {
+      for (int g = 0; g < n_g; g++) {
+        for (int k = 0; k < n_c; k++) {
+          log_prior += prior::log_normal(params[idx++], 0.0, 1.0);
+        }
+      }
+      int n_L = n_c * (n_c + 1) / 2;
+      std::vector<double> L_vals(n_L);
+      for (int l = 0; l < n_L; l++) {
+        L_vals[l] = params[idx++];
+      }
+      log_prior += log_lkj_cholesky(L_vals, n_c, pr.cor_eta());
+      int l_idx = 0;
+      for (int j = 0; j < n_c; j++) {
+        log_prior += pr.re_scale(L_vals[l_idx]);
+        l_idx += n_c - j;
+      }
+    } else {
+      for (int g = 0; g < n_g; g++) {
+        for (int k = 0; k < n_c; k++) {
+          double log_sigma_k = params[idx + n_g * n_c + k];
+          log_prior += prior::log_normal(params[idx++], 0.0, std::exp(log_sigma_k));
+        }
+      }
+      for (int k = 0; k < n_c; k++) {
+        log_prior += pr.re_sd(params[idx++]);
+      }
+    }
+  }
+  return log_prior;
+}
+
+
 double phase_log_prior_slopes(
     NumericVector params,
     int n_trans_coef,
@@ -404,238 +458,19 @@ double phase_log_prior_slopes(
     int n_dyn_coef_1,
     List trans_re_info,
     List dyn_re_info_0,
-    List dyn_re_info_1
+    List dyn_re_info_1,
+    const prior::PriorSet& pr
 ) {
-
-  double log_prior = 0.0;
   int idx = 0;
-
-  // Fixed effects priors: Normal(0, 2.5)
-  for (int j = 0; j < n_trans_coef; j++) {
-    double x = params[idx++];
-    log_prior += -0.5 * std::log(2.0 * M_PI * 6.25) - 0.5 * x * x / 6.25;
-  }
-  for (int j = 0; j < n_dyn_coef_0; j++) {
-    double x = params[idx++];
-    log_prior += -0.5 * std::log(2.0 * M_PI * 6.25) - 0.5 * x * x / 6.25;
-  }
-  for (int j = 0; j < n_dyn_coef_1; j++) {
-    double x = params[idx++];
-    log_prior += -0.5 * std::log(2.0 * M_PI * 6.25) - 0.5 * x * x / 6.25;
-  }
-
-  // Residual SD priors: Normal(0, 1) on log scale
-  double log_sigma_0 = params[idx++];
-  double log_sigma_1 = params[idx++];
-  log_prior += -0.5 * std::log(2.0 * M_PI) - 0.5 * log_sigma_0 * log_sigma_0;
-  log_prior += -0.5 * std::log(2.0 * M_PI) - 0.5 * log_sigma_1 * log_sigma_1;
-
-  // Transition RE priors - use eager copies
-  int n_trans_re_terms = Rcpp::as<int>(trans_re_info["n_terms"]);
-  std::vector<int> trans_n_groups = Rcpp::as<std::vector<int>>(trans_re_info["n_groups_vec"]);
-  std::vector<int> trans_n_coefs = Rcpp::as<std::vector<int>>(trans_re_info["n_coefs_vec"]);
-  std::vector<int> trans_correlated = Rcpp::as<std::vector<int>>(trans_re_info["correlated_vec"]);
-
-  for (int r = 0; r < n_trans_re_terms; r++) {
-    int n_g = trans_n_groups[r];
-    int n_c = trans_n_coefs[r];
-    bool corr = trans_correlated[r];
-
-    if (n_c == 1) {
-      // Simple intercept: Normal(0, sigma_re)
-      double log_sigma_re = params[idx + n_g];
-      double sigma_re = std::exp(log_sigma_re);
-      double sigma_re_sq = sigma_re * sigma_re;
-
-      for (int g = 0; g < n_g; g++) {
-        double u = params[idx++];
-        log_prior += -0.5 * std::log(2.0 * M_PI) - std::log(sigma_re) - 0.5 * u * u / sigma_re_sq;
-      }
-      // Half-Normal(0, 0.5) on log scale
-      log_prior += -0.5 * std::log(2.0 * M_PI * 0.25) - 0.5 * log_sigma_re * log_sigma_re / 0.25;
-      idx++;
-    } else if (corr) {
-      // Correlated: eta ~ N(0, I), L ~ LKJ
-      for (int g = 0; g < n_g; g++) {
-        for (int k = 0; k < n_c; k++) {
-          double eta = params[idx++];
-          log_prior += -0.5 * std::log(2.0 * M_PI) - 0.5 * eta * eta;
-        }
-      }
-
-      // Cholesky prior (LKJ with eta=1 and half-normal on diagonal)
-      int n_L = n_c * (n_c + 1) / 2;
-      std::vector<double> L_vals(n_L);
-      for (int l = 0; l < n_L; l++) {
-        L_vals[l] = params[idx++];
-      }
-
-      // LKJ prior on correlation structure
-      log_prior += log_lkj_cholesky(L_vals, n_c, 1.0);
-
-      // Half-normal prior on diagonal elements (standard deviations)
-      int l_idx = 0;
-      for (int j = 0; j < n_c; j++) {
-        for (int i = j; i < n_c; i++) {
-          if (i == j) {
-            // Diagonal: half-normal(0, 1) on positive scale
-            double L_jj = L_vals[l_idx];
-            log_prior += -0.5 * std::log(2.0 * M_PI) - 0.5 * L_jj * L_jj;
-          }
-          l_idx++;
-        }
-      }
-    } else {
-      // Uncorrelated: each coefficient has its own sigma
-      for (int g = 0; g < n_g; g++) {
-        for (int k = 0; k < n_c; k++) {
-          double log_sigma_k = params[idx + n_g * n_c + k];
-          double sigma_k = std::exp(log_sigma_k);
-          double u = params[idx++];
-          log_prior += -0.5 * std::log(2.0 * M_PI) - std::log(sigma_k) - 0.5 * u * u / (sigma_k * sigma_k);
-        }
-      }
-      // Priors on log_sigmas
-      for (int k = 0; k < n_c; k++) {
-        double log_sigma_k = params[idx++];
-        log_prior += -0.5 * std::log(2.0 * M_PI * 0.25) - 0.5 * log_sigma_k * log_sigma_k / 0.25;
-      }
-    }
-  }
-
-  // Dynamics 0 RE priors (same logic) - use eager copies
-  int n_dyn_re_terms_0 = Rcpp::as<int>(dyn_re_info_0["n_terms"]);
-  std::vector<int> dyn_n_groups_0 = Rcpp::as<std::vector<int>>(dyn_re_info_0["n_groups_vec"]);
-  std::vector<int> dyn_n_coefs_0 = Rcpp::as<std::vector<int>>(dyn_re_info_0["n_coefs_vec"]);
-  std::vector<int> dyn_correlated_0 = Rcpp::as<std::vector<int>>(dyn_re_info_0["correlated_vec"]);
-
-  for (int r = 0; r < n_dyn_re_terms_0; r++) {
-    int n_g = dyn_n_groups_0[r];
-    int n_c = dyn_n_coefs_0[r];
-    bool corr = dyn_correlated_0[r];
-
-    if (n_c == 1) {
-      double log_sigma_re = params[idx + n_g];
-      double sigma_re = std::exp(log_sigma_re);
-      double sigma_re_sq = sigma_re * sigma_re;
-
-      for (int g = 0; g < n_g; g++) {
-        double v = params[idx++];
-        log_prior += -0.5 * std::log(2.0 * M_PI) - std::log(sigma_re) - 0.5 * v * v / sigma_re_sq;
-      }
-      log_prior += -0.5 * std::log(2.0 * M_PI * 0.25) - 0.5 * log_sigma_re * log_sigma_re / 0.25;
-      idx++;
-    } else if (corr) {
-      for (int g = 0; g < n_g; g++) {
-        for (int k = 0; k < n_c; k++) {
-          double eta = params[idx++];
-          log_prior += -0.5 * std::log(2.0 * M_PI) - 0.5 * eta * eta;
-        }
-      }
-
-      int n_L = n_c * (n_c + 1) / 2;
-      std::vector<double> L_vals(n_L);
-      for (int l = 0; l < n_L; l++) {
-        L_vals[l] = params[idx++];
-      }
-
-      log_prior += log_lkj_cholesky(L_vals, n_c, 1.0);
-
-      int l_idx = 0;
-      for (int j = 0; j < n_c; j++) {
-        for (int i = j; i < n_c; i++) {
-          if (i == j) {
-            double L_jj = L_vals[l_idx];
-            log_prior += -0.5 * std::log(2.0 * M_PI) - 0.5 * L_jj * L_jj;
-          }
-          l_idx++;
-        }
-      }
-    } else {
-      for (int g = 0; g < n_g; g++) {
-        for (int k = 0; k < n_c; k++) {
-          double log_sigma_k = params[idx + n_g * n_c + k];
-          double sigma_k = std::exp(log_sigma_k);
-          double v = params[idx++];
-          log_prior += -0.5 * std::log(2.0 * M_PI) - std::log(sigma_k) - 0.5 * v * v / (sigma_k * sigma_k);
-        }
-      }
-      for (int k = 0; k < n_c; k++) {
-        double log_sigma_k = params[idx++];
-        log_prior += -0.5 * std::log(2.0 * M_PI * 0.25) - 0.5 * log_sigma_k * log_sigma_k / 0.25;
-      }
-    }
-  }
-
-  // Dynamics 1 RE priors - use eager copies
-  int n_dyn_re_terms_1 = Rcpp::as<int>(dyn_re_info_1["n_terms"]);
-  std::vector<int> dyn_n_groups_1 = Rcpp::as<std::vector<int>>(dyn_re_info_1["n_groups_vec"]);
-  std::vector<int> dyn_n_coefs_1 = Rcpp::as<std::vector<int>>(dyn_re_info_1["n_coefs_vec"]);
-  std::vector<int> dyn_correlated_1 = Rcpp::as<std::vector<int>>(dyn_re_info_1["correlated_vec"]);
-
-  for (int r = 0; r < n_dyn_re_terms_1; r++) {
-    int n_g = dyn_n_groups_1[r];
-    int n_c = dyn_n_coefs_1[r];
-    bool corr = dyn_correlated_1[r];
-
-    if (n_c == 1) {
-      double log_sigma_re = params[idx + n_g];
-      double sigma_re = std::exp(log_sigma_re);
-      double sigma_re_sq = sigma_re * sigma_re;
-
-      for (int g = 0; g < n_g; g++) {
-        double v = params[idx++];
-        log_prior += -0.5 * std::log(2.0 * M_PI) - std::log(sigma_re) - 0.5 * v * v / sigma_re_sq;
-      }
-      log_prior += -0.5 * std::log(2.0 * M_PI * 0.25) - 0.5 * log_sigma_re * log_sigma_re / 0.25;
-      idx++;
-    } else if (corr) {
-      for (int g = 0; g < n_g; g++) {
-        for (int k = 0; k < n_c; k++) {
-          double eta = params[idx++];
-          log_prior += -0.5 * std::log(2.0 * M_PI) - 0.5 * eta * eta;
-        }
-      }
-
-      int n_L = n_c * (n_c + 1) / 2;
-      std::vector<double> L_vals(n_L);
-      for (int l = 0; l < n_L; l++) {
-        L_vals[l] = params[idx++];
-      }
-
-      log_prior += log_lkj_cholesky(L_vals, n_c, 1.0);
-
-      int l_idx = 0;
-      for (int j = 0; j < n_c; j++) {
-        for (int i = j; i < n_c; i++) {
-          if (i == j) {
-            double L_jj = L_vals[l_idx];
-            log_prior += -0.5 * std::log(2.0 * M_PI) - 0.5 * L_jj * L_jj;
-          }
-          l_idx++;
-        }
-      }
-    } else {
-      for (int g = 0; g < n_g; g++) {
-        for (int k = 0; k < n_c; k++) {
-          double log_sigma_k = params[idx + n_g * n_c + k];
-          double sigma_k = std::exp(log_sigma_k);
-          double v = params[idx++];
-          log_prior += -0.5 * std::log(2.0 * M_PI) - std::log(sigma_k) - 0.5 * v * v / (sigma_k * sigma_k);
-        }
-      }
-      for (int k = 0; k < n_c; k++) {
-        double log_sigma_k = params[idx++];
-        log_prior += -0.5 * std::log(2.0 * M_PI * 0.25) - 0.5 * log_sigma_k * log_sigma_k / 0.25;
-      }
-    }
-  }
-
+  double log_prior = prior::log_prior_fixed(
+    params, idx, n_trans_coef + n_dyn_coef_0 + n_dyn_coef_1, 2, pr);
+  log_prior += log_prior_re_terms(params, idx, trans_re_info, pr);
+  log_prior += log_prior_re_terms(params, idx, dyn_re_info_0, pr);
+  log_prior += log_prior_re_terms(params, idx, dyn_re_info_1, pr);
   return log_prior;
 }
 
 
-// [[Rcpp::export]]
 double phase_log_posterior_slopes(
     NumericVector params,
     List data,
@@ -644,10 +479,11 @@ double phase_log_posterior_slopes(
     int n_dyn_coef_1,
     List trans_re_info,
     List dyn_re_info_0,
-    List dyn_re_info_1
+    List dyn_re_info_1,
+    const prior::PriorSet& pr
 ) {
   return phase_log_likelihood_slopes(params, data, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1,
                                       trans_re_info, dyn_re_info_0, dyn_re_info_1) +
          phase_log_prior_slopes(params, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1,
-                                 trans_re_info, dyn_re_info_0, dyn_re_info_1);
+                                 trans_re_info, dyn_re_info_0, dyn_re_info_1, pr);
 }

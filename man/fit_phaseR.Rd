@@ -34,7 +34,8 @@ with step-size and diagonal-metric adaptation during warmup, or
 
 \item{cores}{Number of cores for parallel chains (default 1)}
 
-\item{prior}{Prior specification from \code{prior()} (default: weakly informative)}
+\item{prior}{Prior specification from \code{prior()} (default: weakly
+informative); both backends evaluate it for every model family}
 
 \item{seed}{Integer seed. Two fits with the same \code{seed}, data and settings
 return identical draws. With \code{seed = NULL} the seed is drawn from R's

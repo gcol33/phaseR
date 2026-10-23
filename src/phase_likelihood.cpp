@@ -26,7 +26,6 @@ inline double log_dnorm(double y, double mu, double sigma) {
   return -0.5 * std::log(2.0 * M_PI) - std::log(sigma) - 0.5 * z * z;
 }
 
-// [[Rcpp::export]]
 double phase_log_likelihood(
     NumericVector params,
     List data,
@@ -120,115 +119,28 @@ double phase_log_likelihood(
   return total_ll;
 }
 
-// [[Rcpp::export]]
 double phase_log_prior(
     NumericVector params,
     int n_trans_coef,
     int n_dyn_coef_0,
-    int n_dyn_coef_1
+    int n_dyn_coef_1,
+    const prior::PriorSet& pr
 ) {
-
-  double log_prior = 0.0;
   int idx = 0;
-
-  // beta_trans ~ Normal(0, 2.5)
-  for (int j = 0; j < n_trans_coef; j++) {
-    double x = params[idx++];
-    log_prior += -0.5 * std::log(2.0 * M_PI * 6.25) - 0.5 * x * x / 6.25;
-  }
-
-  // beta_0 ~ Normal(0, 2.5)
-  for (int j = 0; j < n_dyn_coef_0; j++) {
-    double x = params[idx++];
-    log_prior += -0.5 * std::log(2.0 * M_PI * 6.25) - 0.5 * x * x / 6.25;
-  }
-
-  // beta_1 ~ Normal(0, 2.5)
-  for (int j = 0; j < n_dyn_coef_1; j++) {
-    double x = params[idx++];
-    log_prior += -0.5 * std::log(2.0 * M_PI * 6.25) - 0.5 * x * x / 6.25;
-  }
-
-  // log_sigma ~ Normal(0, 1)
-  double log_sigma_0 = params[idx++];
-  double log_sigma_1 = params[idx++];
-  log_prior += -0.5 * std::log(2.0 * M_PI) - 0.5 * log_sigma_0 * log_sigma_0;
-  log_prior += -0.5 * std::log(2.0 * M_PI) - 0.5 * log_sigma_1 * log_sigma_1;
-
-  return log_prior;
+  return prior::log_prior_fixed(params, idx,
+                                n_trans_coef + n_dyn_coef_0 + n_dyn_coef_1, 2, pr);
 }
 
-// [[Rcpp::export]]
 double phase_log_posterior(
     NumericVector params,
     List data,
     int n_trans_coef,
     int n_dyn_coef_0,
-    int n_dyn_coef_1
+    int n_dyn_coef_1,
+    const prior::PriorSet& pr
 ) {
   return phase_log_likelihood(params, data, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1) +
-         phase_log_prior(params, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1);
-}
-
-
-// ============================================================================
-// Custom Prior Versions
-// ============================================================================
-
-// [[Rcpp::export]]
-double phase_log_prior_custom(
-    NumericVector params,
-    int n_trans_coef,
-    int n_dyn_coef_0,
-    int n_dyn_coef_1,
-    int beta_type,
-    NumericVector beta_params,
-    int sigma_type,
-    NumericVector sigma_params
-) {
-
-  double log_prior = 0.0;
-  int idx = 0;
-
-  // beta_trans priors
-  for (int j = 0; j < n_trans_coef; j++) {
-    log_prior += prior::log_prior_unbounded(params[idx++], beta_type, beta_params);
-  }
-
-  // beta_0 priors
-  for (int j = 0; j < n_dyn_coef_0; j++) {
-    log_prior += prior::log_prior_unbounded(params[idx++], beta_type, beta_params);
-  }
-
-  // beta_1 priors
-  for (int j = 0; j < n_dyn_coef_1; j++) {
-    log_prior += prior::log_prior_unbounded(params[idx++], beta_type, beta_params);
-  }
-
-  // sigma priors (stored as log_sigma)
-  double log_sigma_0 = params[idx++];
-  double log_sigma_1 = params[idx++];
-  log_prior += prior::log_prior_positive(log_sigma_0, sigma_type, sigma_params);
-  log_prior += prior::log_prior_positive(log_sigma_1, sigma_type, sigma_params);
-
-  return log_prior;
-}
-
-// [[Rcpp::export]]
-double phase_log_posterior_custom(
-    NumericVector params,
-    List data,
-    int n_trans_coef,
-    int n_dyn_coef_0,
-    int n_dyn_coef_1,
-    int beta_type,
-    NumericVector beta_params,
-    int sigma_type,
-    NumericVector sigma_params
-) {
-  return phase_log_likelihood(params, data, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1) +
-         phase_log_prior_custom(params, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1,
-                                beta_type, beta_params, sigma_type, sigma_params);
+         phase_log_prior(params, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1, pr);
 }
 
 
@@ -236,7 +148,6 @@ double phase_log_posterior_custom(
 // Random Effects Versions
 // ============================================================================
 
-// [[Rcpp::export]]
 double phase_log_likelihood_re(
     NumericVector params,
     List data,
@@ -379,7 +290,6 @@ double phase_log_likelihood_re(
 }
 
 
-// [[Rcpp::export]]
 double phase_log_prior_re(
     NumericVector params,
     int n_trans_coef,
@@ -390,74 +300,25 @@ double phase_log_prior_re(
     int n_dyn_re_1,
     bool has_trans_re,
     bool has_dyn_re_0,
-    bool has_dyn_re_1
+    bool has_dyn_re_1,
+    const prior::PriorSet& pr
 ) {
-
-  double log_prior = 0.0;
   int idx = 0;
-
-  // Fixed effects priors
-  for (int j = 0; j < n_trans_coef; j++) {
-    double x = params[idx++];
-    log_prior += -0.5 * std::log(2.0 * M_PI * 6.25) - 0.5 * x * x / 6.25;
-  }
-  for (int j = 0; j < n_dyn_coef_0; j++) {
-    double x = params[idx++];
-    log_prior += -0.5 * std::log(2.0 * M_PI * 6.25) - 0.5 * x * x / 6.25;
-  }
-  for (int j = 0; j < n_dyn_coef_1; j++) {
-    double x = params[idx++];
-    log_prior += -0.5 * std::log(2.0 * M_PI * 6.25) - 0.5 * x * x / 6.25;
-  }
-
-  double log_sigma_0 = params[idx++];
-  double log_sigma_1 = params[idx++];
-  log_prior += -0.5 * std::log(2.0 * M_PI) - 0.5 * log_sigma_0 * log_sigma_0;
-  log_prior += -0.5 * std::log(2.0 * M_PI) - 0.5 * log_sigma_1 * log_sigma_1;
-
-  // Random effects priors
+  double log_prior = prior::log_prior_fixed(
+    params, idx, n_trans_coef + n_dyn_coef_0 + n_dyn_coef_1, 2, pr);
   if (has_trans_re && n_trans_re > 0) {
-    double log_sigma_re = params[idx + n_trans_re];
-    double sigma_re = std::exp(log_sigma_re);
-    double sigma_re_sq = sigma_re * sigma_re;
-    for (int g = 0; g < n_trans_re; g++) {
-      double u = params[idx++];
-      log_prior += -0.5 * std::log(2.0 * M_PI) - std::log(sigma_re) - 0.5 * u * u / sigma_re_sq;
-    }
-    // Prior on log_sigma_re ~ Normal(0, 0.5)
-    log_prior += -0.5 * std::log(2.0 * M_PI * 0.25) - 0.5 * log_sigma_re * log_sigma_re / 0.25;
-    idx++;
+    log_prior += prior::log_prior_re_intercepts(params, idx, n_trans_re, pr);
   }
-
   if (has_dyn_re_0 && n_dyn_re_0 > 0) {
-    double log_sigma_re = params[idx + n_dyn_re_0];
-    double sigma_re = std::exp(log_sigma_re);
-    double sigma_re_sq = sigma_re * sigma_re;
-    for (int g = 0; g < n_dyn_re_0; g++) {
-      double v = params[idx++];
-      log_prior += -0.5 * std::log(2.0 * M_PI) - std::log(sigma_re) - 0.5 * v * v / sigma_re_sq;
-    }
-    log_prior += -0.5 * std::log(2.0 * M_PI * 0.25) - 0.5 * log_sigma_re * log_sigma_re / 0.25;
-    idx++;
+    log_prior += prior::log_prior_re_intercepts(params, idx, n_dyn_re_0, pr);
   }
-
   if (has_dyn_re_1 && n_dyn_re_1 > 0) {
-    double log_sigma_re = params[idx + n_dyn_re_1];
-    double sigma_re = std::exp(log_sigma_re);
-    double sigma_re_sq = sigma_re * sigma_re;
-    for (int g = 0; g < n_dyn_re_1; g++) {
-      double v = params[idx++];
-      log_prior += -0.5 * std::log(2.0 * M_PI) - std::log(sigma_re) - 0.5 * v * v / sigma_re_sq;
-    }
-    log_prior += -0.5 * std::log(2.0 * M_PI * 0.25) - 0.5 * log_sigma_re * log_sigma_re / 0.25;
-    idx++;
+    log_prior += prior::log_prior_re_intercepts(params, idx, n_dyn_re_1, pr);
   }
-
   return log_prior;
 }
 
 
-// [[Rcpp::export]]
 double phase_log_posterior_re(
     NumericVector params,
     List data,
@@ -469,130 +330,13 @@ double phase_log_posterior_re(
     int n_dyn_re_1,
     bool has_trans_re,
     bool has_dyn_re_0,
-    bool has_dyn_re_1
+    bool has_dyn_re_1,
+    const prior::PriorSet& pr
 ) {
   return phase_log_likelihood_re(params, data, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1,
                                   n_trans_re, n_dyn_re_0, n_dyn_re_1,
                                   has_trans_re, has_dyn_re_0, has_dyn_re_1) +
          phase_log_prior_re(params, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1,
                             n_trans_re, n_dyn_re_0, n_dyn_re_1,
-                            has_trans_re, has_dyn_re_0, has_dyn_re_1);
-}
-
-
-// ============================================================================
-// Custom Prior Versions for Random Effects
-// ============================================================================
-
-// [[Rcpp::export]]
-double phase_log_prior_re_custom(
-    NumericVector params,
-    int n_trans_coef,
-    int n_dyn_coef_0,
-    int n_dyn_coef_1,
-    int n_trans_re,
-    int n_dyn_re_0,
-    int n_dyn_re_1,
-    bool has_trans_re,
-    bool has_dyn_re_0,
-    bool has_dyn_re_1,
-    int beta_type,
-    NumericVector beta_params,
-    int sigma_type,
-    NumericVector sigma_params,
-    int re_type,
-    NumericVector re_params
-) {
-
-  double log_prior = 0.0;
-  int idx = 0;
-
-  // Fixed effects priors
-  for (int j = 0; j < n_trans_coef; j++) {
-    log_prior += prior::log_prior_unbounded(params[idx++], beta_type, beta_params);
-  }
-  for (int j = 0; j < n_dyn_coef_0; j++) {
-    log_prior += prior::log_prior_unbounded(params[idx++], beta_type, beta_params);
-  }
-  for (int j = 0; j < n_dyn_coef_1; j++) {
-    log_prior += prior::log_prior_unbounded(params[idx++], beta_type, beta_params);
-  }
-
-  // Residual sigma priors
-  double log_sigma_0 = params[idx++];
-  double log_sigma_1 = params[idx++];
-  log_prior += prior::log_prior_positive(log_sigma_0, sigma_type, sigma_params);
-  log_prior += prior::log_prior_positive(log_sigma_1, sigma_type, sigma_params);
-
-  // Random effects priors
-  if (has_trans_re && n_trans_re > 0) {
-    double log_sigma_re = params[idx + n_trans_re];
-    double sigma_re = std::exp(log_sigma_re);
-    double sigma_re_sq = sigma_re * sigma_re;
-    // RE values ~ Normal(0, sigma_re)
-    for (int g = 0; g < n_trans_re; g++) {
-      double u = params[idx++];
-      log_prior += -0.5 * std::log(2.0 * M_PI) - std::log(sigma_re) - 0.5 * u * u / sigma_re_sq;
-    }
-    // Prior on RE SD
-    log_prior += prior::log_prior_positive(log_sigma_re, re_type, re_params);
-    idx++;
-  }
-
-  if (has_dyn_re_0 && n_dyn_re_0 > 0) {
-    double log_sigma_re = params[idx + n_dyn_re_0];
-    double sigma_re = std::exp(log_sigma_re);
-    double sigma_re_sq = sigma_re * sigma_re;
-    for (int g = 0; g < n_dyn_re_0; g++) {
-      double v = params[idx++];
-      log_prior += -0.5 * std::log(2.0 * M_PI) - std::log(sigma_re) - 0.5 * v * v / sigma_re_sq;
-    }
-    log_prior += prior::log_prior_positive(log_sigma_re, re_type, re_params);
-    idx++;
-  }
-
-  if (has_dyn_re_1 && n_dyn_re_1 > 0) {
-    double log_sigma_re = params[idx + n_dyn_re_1];
-    double sigma_re = std::exp(log_sigma_re);
-    double sigma_re_sq = sigma_re * sigma_re;
-    for (int g = 0; g < n_dyn_re_1; g++) {
-      double v = params[idx++];
-      log_prior += -0.5 * std::log(2.0 * M_PI) - std::log(sigma_re) - 0.5 * v * v / sigma_re_sq;
-    }
-    log_prior += prior::log_prior_positive(log_sigma_re, re_type, re_params);
-    idx++;
-  }
-
-  return log_prior;
-}
-
-
-// [[Rcpp::export]]
-double phase_log_posterior_re_custom(
-    NumericVector params,
-    List data,
-    int n_trans_coef,
-    int n_dyn_coef_0,
-    int n_dyn_coef_1,
-    int n_trans_re,
-    int n_dyn_re_0,
-    int n_dyn_re_1,
-    bool has_trans_re,
-    bool has_dyn_re_0,
-    bool has_dyn_re_1,
-    int beta_type,
-    NumericVector beta_params,
-    int sigma_type,
-    NumericVector sigma_params,
-    int re_type,
-    NumericVector re_params
-) {
-  return phase_log_likelihood_re(params, data, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1,
-                                  n_trans_re, n_dyn_re_0, n_dyn_re_1,
-                                  has_trans_re, has_dyn_re_0, has_dyn_re_1) +
-         phase_log_prior_re_custom(params, n_trans_coef, n_dyn_coef_0, n_dyn_coef_1,
-                                   n_trans_re, n_dyn_re_0, n_dyn_re_1,
-                                   has_trans_re, has_dyn_re_0, has_dyn_re_1,
-                                   beta_type, beta_params, sigma_type, sigma_params,
-                                   re_type, re_params);
+                            has_trans_re, has_dyn_re_0, has_dyn_re_1, pr);
 }

@@ -1,5 +1,12 @@
 # phaseR (development version)
 
+* Random-effect terms whose grouping factor varies within a unit, such as
+  `(1 | year)` crossed with units, now add the effect of each observation's
+  own level. The likelihood used the level of the unit's first observation
+  at every time, so a crossed year effect acted as an effect of the first
+  year. Random slopes without an intercept, `(0 + x | group)`, now multiply
+  their covariate; the likelihood added them as random intercepts.
+
 * All model families evaluate their likelihood through one forward recursion
   over the latent phases (`src/phase_process.h`) and one model description
   (`src/phase_model.h`): K ordered phases, one logistic transition predictor

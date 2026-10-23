@@ -33,9 +33,6 @@ posterior_target <- function(stan_data) {
                stan_data$dyn_re_multi_1)
   }
 
-  unit_size <- stan_data$unit_end - stan_data$unit_start + 1L
-  unit_first_obs <- rep(stan_data$unit_start + 1L, unit_size)
-
   offset <- 0L
   predictor <- function(X) {
     out <- list(X = X, offset = offset, re = list())
@@ -55,8 +52,8 @@ posterior_target <- function(stan_data) {
       n_groups = as.integer(term$n_groups),
       n_coefs = as.integer(term$n_coefs),
       offset = offset,
-      group = as.integer(term$idx[unit_first_obs]) - 1L,
-      Z = if (term$n_coefs > 1L) term$Z else NULL
+      group = as.integer(term$idx) - 1L,
+      Z = term$Z
     )
     offset <<- offset + term$n_groups * term$n_coefs + n_hyper
     out

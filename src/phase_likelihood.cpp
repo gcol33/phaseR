@@ -1,6 +1,7 @@
 #include <Rcpp.h>
 #include <cmath>
 #include <vector>
+#include "phase_data.h"
 #include "prior_functions.h"
 
 using namespace Rcpp;
@@ -58,20 +59,14 @@ double phase_log_likelihood(
   double sigma_0 = std::exp(log_sigma_0);
   double sigma_1 = std::exp(log_sigma_1);
 
-  // Unpack data - use eager deep copies to prevent R GC issues
-  std::vector<int> id = Rcpp::as<std::vector<int>>(data["id"]);
-  std::vector<double> y = Rcpp::as<std::vector<double>>(data["y"]);
-  NumericMatrix X_trans = Rcpp::as<NumericMatrix>(data["X_trans"]);
-  NumericMatrix X_dyn = Rcpp::as<NumericMatrix>(data["X_dyn"]);
+  // Observations and per-phase design matrices
+  const phaser::TwoPhaseData d(data);
+  const std::vector<double>& y = d.y;
+  const int n_units = d.n_units;
+  const std::vector<int>& unit_start = d.unit_start;
+  const std::vector<int>& unit_end = d.unit_end;
 
-  int N = y.size();
-  int n_units = Rcpp::as<int>(data["n_units"]);
-
-  // Forward algorithm for each unit
   double total_ll = 0.0;
-
-  std::vector<int> unit_start = Rcpp::as<std::vector<int>>(data["unit_start"]);
-  std::vector<int> unit_end = Rcpp::as<std::vector<int>>(data["unit_end"]);
 
   for (int i = 0; i < n_units; i++) {
 
@@ -85,9 +80,7 @@ double phase_log_likelihood(
 
     // Initial time point: always in phase 0
     double mu_0_init = 0.0;
-    for (int j = 0; j < n_dyn_coef_0; j++) {
-      mu_0_init += beta_0[j] * X_dyn(start, j);
-    }
+    mu_0_init += phaser::linear_predictor(d.X_dyn_0, start, beta_0);
     alpha_0 = log_dnorm(y[start], mu_0_init, sigma_0);
     alpha_1 = -INFINITY;  // Can't be in phase 1 at t=1
 
@@ -96,19 +89,13 @@ double phase_log_likelihood(
 
       // Transition probability
       double eta_trans = 0.0;
-      for (int j = 0; j < n_trans_coef; j++) {
-        eta_trans += beta_trans[j] * X_trans(t, j);
-      }
+      eta_trans += phaser::linear_predictor(d.X_trans, t, beta_trans);
       double p_trans = invlogit(eta_trans);
 
       // Emission probabilities
       double mu_0 = 0.0, mu_1 = 0.0;
-      for (int j = 0; j < n_dyn_coef_0; j++) {
-        mu_0 += beta_0[j] * X_dyn(t, j);
-      }
-      for (int j = 0; j < n_dyn_coef_1; j++) {
-        mu_1 += beta_1[j] * X_dyn(t, j);
-      }
+      mu_0 += phaser::linear_predictor(d.X_dyn_0, t, beta_0);
+      mu_1 += phaser::linear_predictor(d.X_dyn_1, t, beta_1);
 
       double log_emit_0 = log_dnorm(y[t], mu_0, sigma_0);
       double log_emit_1 = log_dnorm(y[t], mu_1, sigma_1);
@@ -313,14 +300,12 @@ double phase_log_likelihood_re(
   double sigma_0 = std::exp(log_sigma_0);
   double sigma_1 = std::exp(log_sigma_1);
 
-  // Data - use eager deep copies to prevent R GC issues
-  std::vector<double> y = Rcpp::as<std::vector<double>>(data["y"]);
-  NumericMatrix X_trans = Rcpp::as<NumericMatrix>(data["X_trans"]);
-  NumericMatrix X_dyn = Rcpp::as<NumericMatrix>(data["X_dyn"]);
-
-  int n_units = Rcpp::as<int>(data["n_units"]);
-  std::vector<int> unit_start = Rcpp::as<std::vector<int>>(data["unit_start"]);
-  std::vector<int> unit_end = Rcpp::as<std::vector<int>>(data["unit_end"]);
+  // Observations and per-phase design matrices
+  const phaser::TwoPhaseData d(data);
+  const std::vector<double>& y = d.y;
+  const int n_units = d.n_units;
+  const std::vector<int>& unit_start = d.unit_start;
+  const std::vector<int>& unit_end = d.unit_end;
 
   // RE indices (1-indexed from R) - eager copies
   std::vector<int> trans_re_idx;
@@ -347,9 +332,7 @@ double phase_log_likelihood_re(
 
     // Initial time point
     double mu_0_init = 0.0;
-    for (int j = 0; j < n_dyn_coef_0; j++) {
-      mu_0_init += beta_0[j] * X_dyn(start, j);
-    }
+    mu_0_init += phaser::linear_predictor(d.X_dyn_0, start, beta_0);
     if (has_dyn_re_0) {
       mu_0_init += v_0[g_dyn_0];
     }
@@ -361,21 +344,15 @@ double phase_log_likelihood_re(
     for (int t = start + 1; t <= end; t++) {
 
       double eta_trans = 0.0;
-      for (int j = 0; j < n_trans_coef; j++) {
-        eta_trans += beta_trans[j] * X_trans(t, j);
-      }
+      eta_trans += phaser::linear_predictor(d.X_trans, t, beta_trans);
       if (has_trans_re) {
         eta_trans += u_trans[g_trans];
       }
       double p_trans = invlogit(eta_trans);
 
       double mu_0 = 0.0, mu_1 = 0.0;
-      for (int j = 0; j < n_dyn_coef_0; j++) {
-        mu_0 += beta_0[j] * X_dyn(t, j);
-      }
-      for (int j = 0; j < n_dyn_coef_1; j++) {
-        mu_1 += beta_1[j] * X_dyn(t, j);
-      }
+      mu_0 += phaser::linear_predictor(d.X_dyn_0, t, beta_0);
+      mu_1 += phaser::linear_predictor(d.X_dyn_1, t, beta_1);
       if (has_dyn_re_0) {
         mu_0 += v_0[g_dyn_0];
       }

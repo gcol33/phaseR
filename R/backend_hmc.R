@@ -74,7 +74,8 @@ nuts_target <- function(stan_data) {
     unit_end = stan_data$unit_end
   )
   two_phase_data <- c(base_data, list(X_trans = stan_data$X_trans,
-                                      X_dyn = stan_data$X_dyn))
+                                      X_dyn_0 = stan_data$X_dyn_0,
+                                      X_dyn_1 = stan_data$X_dyn_1))
   dims <- list(
     n_trans_coef = stan_data$n_trans_coef,
     n_dyn_coef_0 = stan_data$n_dyn_coef_0,

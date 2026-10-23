@@ -1,5 +1,12 @@
 # phaseR (development version)
 
+* Each phase of a two-phase model now uses the design matrix of its own
+  `dynamics()` formula in the likelihood. The C++ likelihoods computed the
+  second phase's mean from the first phase's design matrix, so fits whose two
+  `dynamics()` formulas differed estimated the wrong model, and read past the
+  end of the matrix when the second formula had more columns. Predictions,
+  counterfactuals and WAIC already used the per-phase matrices.
+
 * The HMC backend is the No-U-Turn sampler (Hoffman and Gelman 2014) in
   Stan's multinomial form, replacing fixed-length leapfrog trajectories:
   trajectories double until a U-turn, a divergence or `max_treedepth`, and

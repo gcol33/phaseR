@@ -1,6 +1,7 @@
 #include <Rcpp.h>
 #include <cmath>
 #include <vector>
+#include "phase_data.h"
 
 using namespace Rcpp;
 
@@ -96,13 +97,12 @@ double phase_log_likelihood_glm(
   double sigma_0 = std::exp(log_sigma_0);
   double sigma_1 = std::exp(log_sigma_1);
 
-  // Use eager deep copies to prevent R GC issues
-  std::vector<double> y = Rcpp::as<std::vector<double>>(data["y"]);
-  NumericMatrix X_trans = Rcpp::as<NumericMatrix>(data["X_trans"]);
-  NumericMatrix X_dyn = Rcpp::as<NumericMatrix>(data["X_dyn"]);
-  int n_units = Rcpp::as<int>(data["n_units"]);
-  std::vector<int> unit_start = Rcpp::as<std::vector<int>>(data["unit_start"]);
-  std::vector<int> unit_end = Rcpp::as<std::vector<int>>(data["unit_end"]);
+  // Observations and per-phase design matrices
+  const phaser::TwoPhaseData d(data);
+  const std::vector<double>& y = d.y;
+  const int n_units = d.n_units;
+  const std::vector<int>& unit_start = d.unit_start;
+  const std::vector<int>& unit_end = d.unit_end;
 
   double total_ll = 0.0;
 
@@ -112,27 +112,19 @@ double phase_log_likelihood_glm(
 
     // Forward algorithm
     double mu_0_init = 0.0;
-    for (int j = 0; j < n_dyn_coef_0; j++) {
-      mu_0_init += beta_0[j] * X_dyn(start, j);
-    }
+    mu_0_init += phaser::linear_predictor(d.X_dyn_0, start, beta_0);
 
     double alpha_0 = log_emission(y[start], mu_0_init, sigma_0, family_0, n_trials_0);
     double alpha_1 = -INFINITY;
 
     for (int t = start + 1; t <= end; t++) {
       double eta_trans = 0.0;
-      for (int j = 0; j < n_trans_coef; j++) {
-        eta_trans += beta_trans[j] * X_trans(t, j);
-      }
+      eta_trans += phaser::linear_predictor(d.X_trans, t, beta_trans);
       double p_trans = invlogit_glm(eta_trans);
 
       double mu_0 = 0.0, mu_1 = 0.0;
-      for (int j = 0; j < n_dyn_coef_0; j++) {
-        mu_0 += beta_0[j] * X_dyn(t, j);
-      }
-      for (int j = 0; j < n_dyn_coef_1; j++) {
-        mu_1 += beta_1[j] * X_dyn(t, j);
-      }
+      mu_0 += phaser::linear_predictor(d.X_dyn_0, t, beta_0);
+      mu_1 += phaser::linear_predictor(d.X_dyn_1, t, beta_1);
 
       double log_emit_0 = log_emission(y[t], mu_0, sigma_0, family_0, n_trials_0);
       double log_emit_1 = log_emission(y[t], mu_1, sigma_1, family_1, n_trials_1);

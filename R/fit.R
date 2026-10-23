@@ -231,7 +231,6 @@ prepare_stan_data <- function(model, data, prior = NULL) {
     time = data$time,
     y = data[[response_var]],
     X_trans = X_trans,
-    X_dyn = X_dyn_0,  # For backward compatibility
     X_dyn_0 = X_dyn_0,
     X_dyn_1 = X_dyn_1,
     n_units = n_units,

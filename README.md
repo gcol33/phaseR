@@ -19,11 +19,12 @@ regime.
 
 The package treats “before” and “after” as latent regimes and models two
 things jointly: the transition that moves a unit between regimes, and
-the outcome dynamics within each regime. The likelihood sums over the
-regime each observation may belong to, so the estimates do not condition
-on the realized transition. Splitting the data at the observed change
-point and comparing the two halves does condition on it, which biases
-the comparison whenever the chance of transitioning depends on the same
+the outcome dynamics within each regime. In the package’s functions a
+regime is called a phase. The likelihood sums over the regime each
+observation may belong to, so the estimates do not condition on the
+realized transition. Splitting the data at the observed change point and
+comparing the two halves does condition on it, which biases the
+comparison whenever the chance of transitioning depends on the same
 covariates that drive the outcome. From a fit you can estimate regime
 effects and counterfactual outcomes, and decide which comparison answers
 your question. phaseR supports:
@@ -36,7 +37,7 @@ your question. phaseR supports:
 - **Random effects.** Random intercepts `(1 | group)`, crossed
   `(1 | site) + (1 | year)`, random slopes `(1 + x | group)` and nested
   `(1 | site/plot)`.
-- **Custom priors.** [`prior()`](#usage) with `normal()`, `student_t()`,
+- **Custom priors.** `prior()` with `normal()`, `student_t()`,
   `cauchy()`, `half_normal()`, `half_cauchy()` and `lkj()`.
 - **Counterfactual effects.** `ate()`, `ite()` and `counterfactual()`
   predict outcomes under covariate values that were never observed,
@@ -46,11 +47,12 @@ your question. phaseR supports:
   with `loo()` and `loo_compare()`.
 
 The default backend is the No-U-Turn sampler (NUTS), an adaptive
-Hamiltonian Monte Carlo method, written in C++ with Rcpp, so no Stan,
-JAGS or other inference engine has to be installed. [Why Conditioning on
-Realized Change Fails](vignettes/estimand-failure.Rmd) runs the
-before/after estimate and the phaseR estimate against a known truth on
-simulated data.
+Hamiltonian Monte Carlo method, written in C++ with
+[Rcpp](https://www.rcpp.org), so no separate inference engine needs to
+be installed. [Why Conditioning on Realized Change
+Fails](https://gillescolling.com/phaseR/articles/estimand-failure.html)
+runs the before/after estimate and the phaseR estimate against a known
+truth on simulated data.
 
 ## Installation
 
@@ -133,10 +135,9 @@ summary(fit)
 ```
 
 `backend = "laplace"` approximates the posterior by a Gaussian at its
-mode, with any random effects integrated out first, and returns within a
-second. The default backend, `"hmc"`, samples the posterior with the
-No-U-Turn sampler, and `chains` and `iter` set the number of chains and
-the iterations per chain:
+mode, with any random effects integrated out first. The default backend,
+`"hmc"`, samples the posterior with the No-U-Turn sampler, and `chains`
+and `iter` set the number of chains and the iterations per chain:
 
 ``` r
 fit <- fit_phaseR(model, data = dat, chains = 2, iter = 1000, seed = 42)
@@ -153,10 +154,10 @@ the bias does not shrink with more data.
 phaseR writes down the full generative process instead: a logistic
 transition model for regime membership and an outcome model per regime,
 fitted jointly. The likelihood sums over the latent regime of every
-observation with a log-sum-exp over phase assignments, so the selection
-mechanism is part of the model. [Why Conditioning on Realized Change
-Fails](vignettes/estimand-failure.Rmd) shows the bias on simulated data
-with a known effect.
+observation, so the selection mechanism is part of the model. [Why
+Conditioning on Realized Change
+Fails](https://gillescolling.com/phaseR/articles/estimand-failure.html)
+shows the bias on simulated data with a known effect.
 
 ## Counterfactual effects
 
@@ -200,12 +201,14 @@ model <- phase_model(
 
 ## Documentation
 
-- [Why Conditioning on Realized Change
-  Fails](https://gillescolling.com/phaseR/articles/estimand-failure.html):
-  the before/after estimate and the phaseR estimate against a known
-  effect on simulated data.
-- The help pages document each function, starting with `?phase_model`
-  and `?fit_phaseR`.
+Start with [Why Conditioning on Realized Change
+Fails](https://gillescolling.com/phaseR/articles/estimand-failure.html):
+the before/after estimate and the phaseR estimate against a known effect
+on simulated data.
+
+- [Full reference](https://gillescolling.com/phaseR/reference/): every
+  function, grouped by job, starting with `phase_model()` and
+  `fit_phaseR()`.
 
 ## Getting help
 
